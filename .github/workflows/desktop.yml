@@ -1,0 +1,30 @@
+name: Настольная версия (Windows .exe)
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Собрать app/ из gas/KZ_WebApp.html
+        run: node tools/build.mjs
+      - name: Установить зависимости
+        working-directory: desktop
+        run: npm install --no-audit --no-fund
+      - name: Собрать установщик и опубликовать в Releases
+        working-directory: desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run prepare-app && npx electron-builder --win nsis --x64 --publish always
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KontrolZapasa-Setup
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/latest.yml
