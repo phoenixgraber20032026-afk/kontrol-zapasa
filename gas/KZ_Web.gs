@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  КОНТРОЛЬ НЕСНИЖАЕМОГО ЗАПАСА — ВЕБ-ПРИЛОЖЕНИЕ (серверная часть)  v1.7
+ *  КОНТРОЛЬ НЕСНИЖАЕМОГО ЗАПАСА — ВЕБ-ПРИЛОЖЕНИЕ (серверная часть)  v1.8
  * ============================================================================
  *  Файл добавляется в проект Apps Script таблицы «Контроль_неснижаемого_запаса»
  *  РЯДОМ с основным скриптом (Code.gs, KontrolZapasa v2.0) и файлом KZ_WebApp.html.
@@ -24,7 +24,7 @@
  */
 
 var KZW = {
-  VERSION: '1.7',
+  VERSION: '1.8',
   HTML_FILE: 'KZ_WebApp',
   TITLE: 'Контроль неснижаемого запаса',
   TOKEN_TTL_MS: 12 * 3600 * 1000,
@@ -106,6 +106,7 @@ function kzwAuth_(token, minRole) {
   var s = JSON.parse(raw);
   if (s.exp < Date.now()) throw new Error('AUTH: сессия истекла — войдите заново');
   if (minRole && KZW_RANK[s.role] < KZW_RANK[minRole]) throw new Error('Недостаточно прав: нужен уровень WIZARD');
+  if (minRole === 'wizard') kzwEdgeBump_();   // v1.8: любая правка WIZARD → ускоритель сбрасывает кэш
   return s.role;
 }
 function kzwSetPassword(token, wizardPass) {
@@ -139,6 +140,18 @@ function kzwBootstrap(token, password) {
   };
   res.data = kzwGetData(token);
   return res;
+}
+/** v1.8: то же без пакета данных — для ускорителя (мета по роли отдельно от data). */
+function kzwBootMeta(token) {
+  var role = kzwAuth_(token), ss = kzwSs_();
+  return {
+    role: role, title: KZW.TITLE, today: kzwDateStr_(new Date()),
+    sheets: kzwVisibleSheets_(ss, role), allSheets: ss.getSheets().map(function (s) { return s.getName(); }),
+    pages: kzwPages_(ss, role), webSettings: kzwSettings_(ss),
+    whNames: WH_NAMES.slice(), whOut: WH_OUT, types: TYPES.map(function (T) { return T.t; }),
+    sheetNames: { ost: SH_OST, spr: SH_SPR, grp: SH_GRP, set: SH_SET, hist: SH_HI, crit: SH_CRIT, sum: SH_SUM, xref: SH_XREF, stat: SH_ST, raw: SH_RAW },
+    scriptVersion: (typeof KZ !== 'undefined' && KZ.VERSION) || ''
+  };
 }
 
 /** Все данные для приложения одним пакетом: позиции «Остатков» + комментарии «Справочника», группы, история, настройки. */
@@ -1166,4 +1179,62 @@ function kzwDeleteOrder(token, id) {
   for (var i = col.length - 1; i >= 0; i--) if (String(col[i][0]).trim() === id) ws.deleteRow(i + 2);
   SpreadsheetApp.flush();
   return kzwOrders(token);
+}
+
+
+// ═══════════════════════════════════════════════════════════════ v1.8: УСКОРИТЕЛЬ CLOUDFLARE (kz-edge)
+/*
+ *  Worker kz-edge держит готовый пакет данных (kzwGetData, партии, заказы, листы) в D1 и отдаёт его за
+ *  доли секунды; все записи он передаёт сюда без изменений. Чтобы кэш не отставал:
+ *   1) kzwAuth_(…, 'wizard') перед каждой правкой дёргает POST <EDGE_URL>/edge/bump (ключ EDGE_KEY);
+ *   2) Worker раз в 5 минут вызывает kzwEdgeSig и сравнивает подпись (ловит правки прямо в листах);
+ *   3) после пересборки (kzwStatus: busy → false) Worker перечитывает данные сам.
+ *  Подключение: WIZARD → «Пароль» → «⚡ Ускоритель» (kzwEdgeSetup) — адрес Worker'а и ключ из ПОДКЛЮЧЕНИЕ.txt.
+ */
+var KZW_EDGE = { URL: 'EDGE_URL', KEY: 'EDGE_KEY' };
+function kzwEdgeProps_() { var p = PropertiesService.getScriptProperties(); return { url: String(p.getProperty(KZW_EDGE.URL) || '').replace(/\/+$/, ''), key: String(p.getProperty(KZW_EDGE.KEY) || '') }; }
+function kzwEdgeBump_() {
+  try {
+    var e = kzwEdgeProps_(); if (!e.url || !e.key) return;
+    var c = CacheService.getScriptCache(); if (c.get('kzw_bump')) return;   // не чаще раза в 5 с
+    c.put('kzw_bump', '1', 5);
+    UrlFetchApp.fetch(e.url + '/edge/bump', { method: 'post', contentType: 'application/json', payload: '{}', headers: { 'X-Edge-Key': e.key }, muteHttpExceptions: true });
+  } catch (err) {}
+}
+/** Подпись данных, которые влияют на пакет приложения: настройки, параметры контроля, группы, веб-страницы, заказы, список листов, состояние пересборки. ~1 с. */
+function kzwEdgeSig(token) {
+  kzwAuth_(token);
+  var ss = kzwSs_(), parts = [], add = function (x) { parts.push(typeof x === 'string' ? x : JSON.stringify(x)); };
+  var st = ss.getSheetByName(SH_SET); if (st) add(st.getRange('B2:B6').getValues());
+  var spr = ss.getSheetByName(SH_SPR); if (spr && spr.getLastRow() > 1) add(spr.getRange(2, 7, spr.getLastRow() - 1, Math.max(1, Math.min(spr.getMaxColumns(), KZW_EXCL.COL) - 6)).getValues());
+  var grp = ss.getSheetByName(SH_GRP); if (grp && grp.getLastRow() > 1) add(grp.getRange(2, 1, grp.getLastRow() - 1, 4).getValues());
+  var pg = ss.getSheetByName(KZW.SHEET_PAGES); if (pg && pg.getLastRow() > 1) add(pg.getRange(2, 1, pg.getLastRow() - 1, 7).getValues());
+  var ord = ss.getSheetByName(KZW_ORD.SHEET); if (ord && ord.getLastRow() > 1) add(ord.getRange(2, 1, ord.getLastRow() - 1, 5).getValues());
+  var ost = ss.getSheetByName(SH_OST); if (ost) add([ost.getLastRow(), String(ost.getRange(2, C_STAT).getFormula()).length]);
+  add(ss.getSheets().map(function (x) { return x.getName(); }));
+  var state = null; try { state = kzLoadState_(); } catch (e) {}
+  var str = parts.join('\u0001'), h = 5381; for (var i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+  return { sig: (h >>> 0).toString(36) + '-' + str.length, busy: !!state, lastLoad: st ? kzwDateTimeStr_(st.getRange('B4').getValue()) : '', ver: KZW.VERSION, at: kzwDateTimeStr_(new Date()) };
+}
+/** Подключить ускоритель: адрес Worker'а + ключ; проверяется /edge/ping. */
+function kzwEdgeSetup(token, url, key) {
+  kzwAuth_(token, 'wizard');
+  url = String(url || '').trim().replace(/\/+$/, ''); key = String(key || '').trim();
+  if (!/^https:\/\/[a-z0-9.-]+\.workers\.dev$|^https:\/\/[^\/\s]+$/.test(url)) throw new Error('Адрес ускорителя должен быть вида https://kz-edge.<имя>.workers.dev');
+  if (key.length < 16) throw new Error('Ключ слишком короткий — скопируйте его из ПОДКЛЮЧЕНИЕ.txt');
+  var r = UrlFetchApp.fetch(url + '/edge/ping', { headers: { 'X-Edge-Key': key }, muteHttpExceptions: true });
+  var code = r.getResponseCode(), body = {}; try { body = JSON.parse(r.getContentText()); } catch (e) {}
+  if (code !== 200 || !body.ok) throw new Error('Ускоритель не ответил (' + code + '): ' + (body.error || r.getContentText().slice(0, 120)));
+  var p = PropertiesService.getScriptProperties(); p.setProperty(KZW_EDGE.URL, url); p.setProperty(KZW_EDGE.KEY, key);
+  try { UrlFetchApp.fetch(url + '/edge/bump', { method: 'post', contentType: 'application/json', payload: '{}', headers: { 'X-Edge-Key': key }, muteHttpExceptions: true }); } catch (e2) {}
+  return kzwEdgeStatus(token);
+}
+function kzwEdgeOff(token) { kzwAuth_(token, 'wizard'); var p = PropertiesService.getScriptProperties(); p.deleteProperty(KZW_EDGE.URL); p.deleteProperty(KZW_EDGE.KEY); return { on: false }; }
+function kzwEdgeStatus(token) {
+  kzwAuth_(token);
+  var e = kzwEdgeProps_(); if (!e.url) return { on: false };
+  var res = { on: true, url: e.url };
+  try { var r = UrlFetchApp.fetch(e.url + '/edge/status', { headers: { 'X-Edge-Key': e.key }, muteHttpExceptions: true }); res.code = r.getResponseCode(); try { res.edge = JSON.parse(r.getContentText()); } catch (e1) { res.edge = null; } res.okPing = res.code === 200 && !!(res.edge && res.edge.ok); }
+  catch (err) { res.okPing = false; res.error = String(err && err.message || err); }
+  return res;
 }

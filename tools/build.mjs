@@ -9,4 +9,11 @@ writeFileSync('app/sw.js', readFileSync('app/sw.js', 'utf8').replace(/var CACHE 
 // версия настольной программы
 const pkgPath = 'desktop/package.json';
 if (existsSync(pkgPath)) { const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')); if (/^\d+\.\d+$/.test(String(ver))) pkg.version = ver + '.0'; writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n'); }
-console.log('app/ собрана, версия', ver);
+// ускоритель Cloudflare: edge/public = app/ + флаг KZW_EDGE (данные берутся с того же адреса, /api)
+import { mkdirSync, readdirSync } from 'node:fs';
+mkdirSync('edge/public', { recursive: true });
+for (const f of readdirSync('app')) {
+  if (f === 'index.html') writeFileSync('edge/public/index.html', readFileSync('app/index.html', 'utf8').replace('<meta charset="utf-8">', '<meta charset="utf-8">\n<script>window.KZW_EDGE = 1;</script>'));
+  else copyFileSync('app/' + f, 'edge/public/' + f);
+}
+console.log('app/ и edge/public собраны, версия', ver);

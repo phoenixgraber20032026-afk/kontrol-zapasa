@@ -1,0 +1,20 @@
+# kz-edge — ускоритель «Контроль неснижаемого запаса». database_id и GAS_URL заполняет install.mjs.
+name = "kz-edge"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+workers_dev = true
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kz-db"
+database_id = "REPLACE_WITH_D1_ID"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+GAS_URL = "REPLACE_WITH_EXEC_URL"

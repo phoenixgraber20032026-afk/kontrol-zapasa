@@ -1,7 +1,7 @@
 {
   "name": "kontrol-zapasa",
   "productName": "Контроль неснижаемого запаса",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Настольная версия программы «Контроль неснижаемого запаса» (данные — в Google-таблице)",
   "author": "Инструмент-Ресурс",
   "license": "UNLICENSED",

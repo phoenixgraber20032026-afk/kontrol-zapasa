@@ -25,7 +25,12 @@ tools/      build.mjs — сборка app/ из gas/ и синхронизац�
 .github/    workflows: pages.yml (сайт), desktop.yml (установщик Windows по метке v*)
 ```
 
-Подробная пошаговая инструкция — `УСТАНОВКА_GitHub_и_exe.md`.
+edge/       ускоритель Cloudflare (Worker kz-edge + D1): src/index.js, wrangler.toml, install.mjs, УСТАНОВКА.cmd, ОБНОВИТЬ.cmd, ЧИТАТЬ.txt
+
+Подробная пошаговая инструкция — `УСТАНОВКА_GitHub_и_exe.md`; ускоритель — `edge/ЧИТАТЬ.txt`.
+
+## Ускоритель Cloudflare (v1.8)
+`edge/УСТАНОВКА.cmd` (Node.js 18+, бесплатный аккаунт Cloudflare) → адрес `https://kz-edge.<имя>.workers.dev` и ключ в `edge/ПОДКЛЮЧЕНИЕ.txt` → в программе WIZARD → «Пароль» → «⚡ Ускоритель» → Подключить. Сотрудники открывают адрес ускорителя: вход и данные — за доли секунды, без связи — последний пакет (просмотр). После новой версии файлов — `edge/ОБНОВИТЬ.cmd`.
 
 ## Выпуск новой версии (коротко)
 1. Правим `gas/KZ_WebApp.html` / `gas/KZ_Web.gs` (номер в `KZW.VERSION`), `clasp push` в Apps Script → новая версия развёртывания.

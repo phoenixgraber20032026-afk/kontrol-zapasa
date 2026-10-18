@@ -124,6 +124,8 @@
   .alertbox li{margin:2px 0}
   .alertbox .actions{margin-top:8px;justify-content:flex-start}
   body.alarm header{box-shadow:inset 0 -3px 0 #ff5a3c}
+  body.offline header{filter:grayscale(.5)}
+  body.offline .wiz-only,body.offline #itemSave,body.offline #grpSave{display:none !important}
   /* v1.6: выпадающий список с мультивыбором */
   .msel{position:relative;display:inline-block}
   .msel>button{background:#fff;border:1px solid #bbb;border-radius:6px;padding:6px 26px 6px 8px;cursor:pointer;text-align:left;min-width:190px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:relative}
@@ -288,7 +290,7 @@
       <div class="actions"><button class="primary" id="apiSave">Проверить и сохранить</button></div>
     </div>
   </div>
-  <p class="hint" style="margin-top:14px;opacity:.6">Контроль неснижаемого запаса · v1.7 · <span id="modeLabel"></span></p>
+  <p class="hint" style="margin-top:14px;opacity:.6">Контроль неснижаемого запаса · v1.8 · <span id="modeLabel"></span></p>
 </div>
 
 <!-- ПРИЛОЖЕНИЕ -->
@@ -306,6 +308,7 @@
 </header>
 <main>
   <div class="alertbox" id="alertBox" style="display:none"></div>
+  <div class="msg info" id="offBar" style="display:none;margin-top:0"></div>
   <div class="msg" id="globalMsg"></div>
   <div id="stateBanner"></div>
   <div id="whStrip" class="whstrip" style="display:none"></div>
@@ -704,6 +707,18 @@
       <div class="actions"><button class="primary" id="pSave">Сохранить</button></div>
       <p class="hint">Уровень ПРОСМОТР пароля не имеет: любой, у кого есть ссылка, видит данные, но ничего не меняет.</p>
     </div>
+    <div class="panel" style="max-width:720px">
+      <h3 style="margin-top:0;color:var(--hdr)">⚡ Ускоритель Cloudflare</h3>
+      <p class="hint">Worker <b>kz-edge</b> держит готовую копию данных и отдаёт страницу и пакет за доли секунды; все записи по-прежнему идут в Google-таблицу. Адрес и ключ — из файла ПОДКЛЮЧЕНИЕ.txt после установки (папка <code>edge</code> репозитория, УСТАНОВКА.cmd).</p>
+      <div id="edgeInfo" class="hint" style="margin-bottom:8px">Состояние не проверялось.</div>
+      <div class="fields">
+        <div class="field"><label>Адрес ускорителя</label><input type="text" id="edgeUrl" placeholder="https://kz-edge.xxxx.workers.dev"></div>
+        <div class="field"><label>Ключ EDGE_KEY</label><input type="text" id="edgeKey" placeholder="из ПОДКЛЮЧЕНИЕ.txt" autocomplete="off"></div>
+      </div>
+      <div class="msg" id="edgeMsg"></div>
+      <div class="actions"><button class="secondary" id="edgeCheck">Проверить</button><button class="danger" id="edgeOff">Отключить</button><button class="primary" id="edgeSave">Подключить</button></div>
+      <p class="hint">После подключения дайте сотрудникам адрес ускорителя как ссылку на программу (или укажите его как «Адрес программы Google» в настольной версии / на сайте GitHub) — они увидят ту же программу, но быстрее. Apps Script сам сообщает ускорителю о каждой правке; раз в 5 минут ускоритель дополнительно сверяет данные с таблицей.</p>
+    </div>
   </section>
 </main>
 </div>
@@ -791,7 +806,9 @@
   // ───── v1.7: два режима работы — внутри Google (google.script.run) и «сайт» / настольная программа (fetch POST на /exec)
   var GAS = !!(window.google && google.script && google.script.run);
   S.mode = GAS ? 'gas' : 'site';
+  var EDGE = !GAS && !!window.KZW_EDGE;   // v1.8: страница отдана ускорителем Cloudflare — данные с того же адреса (/api)
   function apiUrl() {
+    if (EDGE) return location.origin + '/api';
     var u = ''; try { u = localStorage.getItem('kzw_api') || ''; } catch (e) {}
     if (!u && window.KZW_API) u = window.KZW_API;
     return String(u || '').trim();
@@ -814,7 +831,7 @@
     return fetch(url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ api: fn, args: args }), redirect: 'follow', signal: ctl ? ctl.signal : undefined })
       .then(function (r) { if (!r.ok) throw new Error('Сервер Google ответил ' + r.status); return r.text(); })
       .then(function (txt) { var j; try { j = JSON.parse(txt); } catch (e) { throw new Error(/<html/i.test(txt) ? 'Адрес программы отвечает страницей, а не данными: проверьте, что это ссылка /exec веб-приложения с доступом «Все»' : 'Непонятный ответ сервера'); } if (!j.ok) { var err = new Error(j.error || 'Ошибка'); if (/AUTH:/.test(err.message)) logout(true); throw err; } return j.result; })
-      .catch(function (e) { if (e && e.name === 'AbortError') e = new Error('Сервер Google не ответил за 5 минут'); if (e && /Failed to fetch|NetworkError|Load failed/.test(e.message)) e = new Error('Нет связи с Google (интернет или адрес программы)'); throw e; })
+      .catch(function (e) { if (e && e.name === 'AbortError') { e = new Error('Сервер не ответил за 5 минут'); e.net = true; } if (e && /Failed to fetch|NetworkError|Load failed/.test(e.message)) { e = new Error(EDGE ? 'Нет связи с ускорителем (интернет)' : 'Нет связи с Google (интернет или адрес программы)'); e.net = true; } throw e; })
       .then(function (v) { clearTimeout(tm); done(); return v; }, function (e) { clearTimeout(tm); done(); throw e; });
   }
   function call(fn) { return rpc(fn, Array.prototype.slice.call(arguments, 1), false); }
@@ -945,7 +962,7 @@
   // ───── v1.7: адрес программы Google (режим «сайт» / настольная программа)
   function renderApiBox() {
     var box = $('apiBox'); if (!box) return;
-    if (GAS) { box.style.display = 'none'; return; }
+    if (GAS || EDGE) { box.style.display = 'none'; return; }
     box.style.display = '';
     var u = apiUrl();
     $('apiCur').textContent = u ? 'Программа Google: ' + u.replace(/^https:\/\/script\.google\.com\/macros\/s\/(.{6}).+\/exec$/, 'https://script.google.com/macros/s/$1…/exec') : 'Адрес программы Google не задан';
@@ -955,9 +972,10 @@
   $('apiBtn').addEventListener('click', function () { $('apiSetup').style.display = $('apiSetup').style.display === 'none' ? '' : 'none'; $('apiInput').focus(); });
   $('apiSave').addEventListener('click', function () {
     var u = $('apiInput').value.trim().replace(/\/dev$/, '/exec').replace(/\?.*$/, '');
-    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(u)) { msg($('apiMsg'), 'Нужна ссылка веб-приложения вида https://script.google.com/macros/s/…/exec (Развернуть → Управление развёртываниями → копировать URL)', 'err'); return; }
+    if (/^https:\/\/[a-z0-9.-]+\.workers\.dev\/?$/i.test(u)) u = u.replace(/\/?$/, '/api');   // адрес ускорителя — можно без /api
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(u) && !/^https:\/\/[^\s/]+\/api$/.test(u)) { msg($('apiMsg'), 'Нужна ссылка веб-приложения вида https://script.google.com/macros/s/…/exec (Развернуть → Управление развёртываниями → копировать URL) или адрес ускорителя https://kz-edge.….workers.dev', 'err'); return; }
     msg($('apiMsg'), 'Проверяю адрес…', 'info'); $('apiSave').disabled = true;
-    pingApi(u).then(function (j) { setApiUrl(u); msg($('apiMsg'), 'Программа найдена: «' + j.title + '» v' + j.ver + '. Адрес сохранён на этом устройстве.', 'ok'); renderApiBox(); $('apiSetup').style.display = 'none'; })
+    pingApi(u).then(function (j) { setApiUrl(u); msg($('apiMsg'), 'Программа найдена: «' + j.title + '» v' + j.ver + (j.edge ? ' (ускоритель)' : '') + '. Адрес сохранён на этом устройстве.', 'ok'); renderApiBox(); $('apiSetup').style.display = 'none'; })
       .catch(function (e) { msg($('apiMsg'), e.message, 'err'); }).then(function () { $('apiSave').disabled = false; });
   });
   $('apiInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('apiSave').click(); });
@@ -969,10 +987,18 @@
     showLogin();
     if (expired) msg($('loginMsg2'), 'Сессия истекла — войдите заново', 'err');
   }
+  // ───── v1.8: работа без связи (режим «сайт» / настольная версия): последний пакет данных хранится в IndexedDB
+  function idb() { return new Promise(function (res, rej) { if (!('indexedDB' in window)) return rej(new Error('нет IndexedDB')); var r = indexedDB.open('kzw_offline', 1); r.onupgradeneeded = function () { r.result.createObjectStore('kv'); }; r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); }; }); }
+  function idbPut(k, v) { return idb().then(function (db) { return new Promise(function (res) { var tx = db.transaction('kv', 'readwrite'); tx.objectStore('kv').put(v, k); tx.oncomplete = function () { res(true); }; tx.onerror = function () { res(false); }; }); }).catch(function () { return false; }); }
+  function idbGet(k) { return idb().then(function (db) { return new Promise(function (res) { var rq = db.transaction('kv').objectStore('kv').get(k); rq.onsuccess = function () { res(rq.result || null); }; rq.onerror = function () { res(null); }; }); }).catch(function () { return null; }); }
+  function saveOffline(b) { if (GAS) return; try { idbPut('boot', { at: new Date().toISOString(), boot: b }); } catch (e) {} }
+  function offBar(text) { var el = $('offBar'); if (!el) return; el.style.display = text ? '' : 'none'; el.textContent = text || ''; document.body.classList.toggle('offline', !!text); }
+  window.addEventListener('online', function () { if (S.offline && S.token) { S.offline = false; offBar(''); start(); } });
   function start(password) {
     call('kzwBootstrap', S.token || '', password || '').then(function (b) {
       $('loginBtn').disabled = false;
       if (b.error) { msg($('loginMsg'), b.error, 'err'); return; }
+      S.offline = false; offBar(''); saveOffline(b);
       if (S.wantRole === 'wizard' && b.role !== 'wizard') { msg($('loginMsg'), 'Это не пароль WIZARD', 'err'); call('kzwLogout', b.token).catch(function () {}); return; }
       S.wantRole = null; S.token = b.token; S.role = b.role; S.boot = b;
       try { localStorage.setItem('kzw_token', b.token); } catch (e) {}
@@ -987,13 +1013,28 @@
       $('whStrip').style.display = ''; renderWhStrip();
       renderAll(); checkAlerts(false);
       if (b.data.state && b.data.state.busy) startPoll();
-    }).catch(function (e) { $('loginBtn').disabled = false; msg($('loginMsg2'), e.message, 'err'); showLogin(); });
+    }).catch(function (e) {
+      $('loginBtn').disabled = false;
+      if (e && e.net && !GAS && S.token) {   // нет связи — показать последний сохранённый пакет (только просмотр)
+        return idbGet('boot').then(function (saved) {
+          if (!saved || !saved.boot) { msg($('loginMsg2'), e.message, 'err'); showLogin(); return; }
+          var b = saved.boot; b.token = S.token; S.role = b.role; S.boot = b; S.offline = true;
+          $('loginView').style.display = 'none'; $('app').style.display = '';
+          var badge = $('roleBadge'); badge.textContent = ROLE_NAME[b.role]; badge.className = 'badge ' + b.role;
+          document.querySelectorAll('.wiz-only').forEach(function (el) { el.style.display = b.role === 'wizard' ? '' : 'none'; });
+          applyData(b.data); renderCustomTabs(); applyTabNames(); applyFont(); fillFilters(); fillSheetSelect(); renderBanner(null);
+          $('whStrip').style.display = ''; renderWhStrip(); renderAll(); checkAlerts(true);
+          offBar('📴 Нет связи — показаны данные на ' + fmtDate(saved.at.slice(0, 16).replace('T', ' ')) + ' (данные 1С от ' + (fmtDate(b.data.settings.lastLoad) || '—') + '). Изменения недоступны; при появлении связи страница обновится сама.');
+        });
+      }
+      msg($('loginMsg2'), e.message, 'err'); showLogin();
+    });
   }
   function refresh(silent) {
     S.cache = { sheets: {}, charts: {} }; S.arr = null; S.snapCache = {}; S.supMap = null; S.orders = null;
     var btn = $('refreshBtn'), t0 = Date.now();
     if (!silent) { msg($('globalMsg'), 'Перечитываю данные из таблицы (обычно 3–8 секунд)…', 'info'); btn.disabled = true; btn.textContent = '⏳'; }
-    return call('kzwGetData', S.token).then(function (D) { applyData(D); fillFilters(); renderBanner(D.state); renderWhStrip(); renderAll(); checkAlerts(false); if (!silent) msg($('globalMsg'), 'Данные обновлены из таблицы за ' + Math.round((Date.now() - t0) / 100) / 10 + ' с: позиций ' + D.items.length + ', групп ' + D.groups.length + ' · данные 1С от ' + (fmtDate(D.settings.lastLoad) || '—'), 'ok'); })
+    return call('kzwGetData', S.token).then(function (D) { applyData(D); fillFilters(); renderBanner(D.state); renderWhStrip(); renderAll(); checkAlerts(false); if (S.boot) { S.boot.data = D; saveOffline(S.boot); } if (!silent) msg($('globalMsg'), 'Данные обновлены из таблицы за ' + Math.round((Date.now() - t0) / 100) / 10 + ' с: позиций ' + D.items.length + ', групп ' + D.groups.length + ' · данные 1С от ' + (fmtDate(D.settings.lastLoad) || '—'), 'ok'); })
       .catch(function (e) { msg($('globalMsg'), 'Не удалось обновить: ' + e.message, 'err'); })
       .then(function () { btn.disabled = false; btn.textContent = '⟳'; });
   }
@@ -1080,7 +1121,7 @@
     if (then) S.arrCbs.push(then);
     if (S.arrLoading) return; S.arrLoading = true;
     call('kzwArrivals', S.token).then(function (r) { S.arr = r.rows || []; S.arrLoading = false; S.supMap = null; S.arr.forEach(function (b) { var it = S.byKey[b.key]; b.type = it ? it.type : ''; b.brand = it ? it.brand : ''; b.ym = b.d ? b.d.slice(0, 7) : ''; }); var cbs = S.arrCbs; S.arrCbs = []; cbs.forEach(function (f) { try { f(); } catch (e) {} }); })
-      .catch(function (e) { S.arrLoading = false; S.arr = []; S.arrCbs = []; msg($('globalMsg'), 'Партии 1С: ' + e.message, 'err'); });
+      .catch(function (e) { S.arrLoading = false; S.arr = []; S.arrCbs = []; if (!S.offline) msg($('globalMsg'), 'Партии 1С: ' + e.message, 'err'); });
   }
   function monthLabel(ym) { var MN = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']; return MN[+ym.slice(5, 7) - 1] + ' ' + ym.slice(2, 4); }
   /** Агрегация партий: по месяцам (последние 18), по типам за 12 мес., поставщики. keysSet — ограничить набором ключей. */
@@ -2456,7 +2497,20 @@
   $('refreshBtn').addEventListener('click', function () { refresh(false); });
   $('listClose').addEventListener('click', function () { $('listBg').classList.remove('open'); });
   document.querySelectorAll('.modal-bg').forEach(function (bg) { bg.addEventListener('click', function (e) { if (e.target === bg) bg.classList.remove('open'); }); });
-  try { $('modeLabel').textContent = GAS ? 'Google' : (window.KZW_DESKTOP ? 'настольная версия' : 'сайт'); } catch (e) {}
+  try { $('modeLabel').textContent = GAS ? 'Google' : (window.KZW_DESKTOP ? 'настольная версия' : (EDGE ? 'ускоритель' : 'сайт')); } catch (e) {}
+  // v1.8: ускоритель Cloudflare (вкладка «Пароль», WIZARD)
+  function edgeShow(r) {
+    var el = $('edgeInfo');
+    if (!r || !r.on) { el.innerHTML = 'Ускоритель <b>не подключён</b> — приложение работает напрямую с Google.'; return; }
+    var c = r.edge && r.edge.cache ? r.edge.cache : [], d = c.filter(function (x) { return x.k === 'data'; })[0];
+    el.innerHTML = 'Подключён: <b>' + esc(r.url) + '</b> · ' + (r.okPing ? '<span class="stat grn">связь есть</span>' : '<span class="stat red">нет ответа' + (r.code ? ' (' + r.code + ')' : '') + '</span>') +
+      (r.edge ? ' · версия ' + esc(r.edge.ver) + ' · в кэше ' + c.length + ' объектов' + (d ? ' · пакет данных ' + d.kb + ' КБ, возраст ' + Math.round(d.ageSec / 60) + ' мин' : ' · пакет данных ещё не загружен') + ' · сессий ' + r.edge.sessions + (r.edge.sigAt ? ' · сверка ' + esc(fmtDate(r.edge.sigAt.slice(0, 16).replace('T', ' '))) : '') : '') + (EDGE ? ' · <b>вы сейчас работаете через ускоритель</b>' : '');
+    if (r.url) $('edgeUrl').value = r.url;
+  }
+  $('edgeCheck').addEventListener('click', function () { msg($('edgeMsg'), ''); call('kzwEdgeStatus', S.token).then(edgeShow).catch(function (e) { msg($('edgeMsg'), e.message, 'err'); }); });
+  $('edgeSave').addEventListener('click', function () { $('edgeSave').disabled = true; call('kzwEdgeSetup', S.token, $('edgeUrl').value, $('edgeKey').value).then(function (r) { edgeShow(r); $('edgeKey').value = ''; msg($('edgeMsg'), 'Ускоритель подключён. Данные начнут отдаваться из кэша через несколько секунд.', 'ok'); }).catch(function (e) { msg($('edgeMsg'), e.message, 'err'); }).then(function () { $('edgeSave').disabled = false; }); });
+  $('edgeOff').addEventListener('click', function () { if (!confirm('Отключить ускоритель? Приложение продолжит работать напрямую с Google; Worker перестанет получать сигналы о правках.')) return; call('kzwEdgeOff', S.token).then(function () { edgeShow(null); msg($('edgeMsg'), 'Отключено', 'ok'); }).catch(function (e) { msg($('edgeMsg'), e.message, 'err'); }); });
+  $('tabs').addEventListener('click', function (e) { var t = e.target.closest('.tab'); if (t && t.dataset.tab === 'passwords' && S.role === 'wizard') setTimeout(function () { call('kzwEdgeStatus', S.token).then(edgeShow).catch(function () {}); }, 50); });
   var saved = null; try { saved = localStorage.getItem('kzw_token'); } catch (e) {}
   if (saved && (GAS || apiUrl())) { S.token = saved; start(); } else showLogin();
 })();
