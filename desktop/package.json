@@ -1,0 +1,73 @@
+{
+  "name": "kontrol-zapasa",
+  "productName": "Контроль неснижаемого запаса",
+  "version": "1.7.0",
+  "description": "Настольная версия программы «Контроль неснижаемого запаса» (данные — в Google-таблице)",
+  "author": "Инструмент-Ресурс",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "prepare-app": "node -e \"const fs=require('fs');fs.rmSync('app',{recursive:true,force:true});fs.cpSync('../app','app',{recursive:true});\"",
+    "start": "npm run prepare-app && electron .",
+    "dist": "npm run prepare-app && electron-builder --win nsis --x64",
+    "dist:portable": "npm run prepare-app && electron-builder --win portable --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
+  },
+  "build": {
+    "appId": "by.air.kontrol-zapasa",
+    "productName": "Контроль запаса",
+    "copyright": "ООО «Инструмент-Ресурс»",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*",
+      "!app/sw.js"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "KontrolZapasa-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Контроль запаса",
+      "language": "1049",
+      "installerLanguages": [
+        "ru_RU"
+      ],
+      "deleteAppDataOnUninstall": false
+    },
+    "portable": {
+      "artifactName": "KontrolZapasa-Portable-${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "phoenixgraber20032026-afk",
+        "repo": "kontrol-zapasa",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/phoenixgraber20032026-afk/kontrol-zapasa.git"
+  }
+}
