@@ -14,7 +14,7 @@
  *  текст JSON хранится в D1 как есть и склеивается в ответ строками.
  */
 
-const VER = '1.8';
+const VER = '2.0';
 const TTL = { sheet: 15 * 60 * 1000, charts: 60 * 60 * 1000 };
 const H = { 'content-type': 'application/json;charset=utf-8', 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type,x-edge-key', 'cache-control': 'no-store' };
 
@@ -27,6 +27,7 @@ export default {
       if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: H });
       if (url.pathname === '/api' || url.pathname === '/exec') return api(req, url, env, ctx);
       if (url.pathname.startsWith('/edge/')) return edge(req, url, env, ctx);
+      if (url.pathname.startsWith('/b24/')) return b24(req, url, env, ctx);
       if (url.pathname === '/ping') return json({ ok: true, app: 'kz', ver: VER, edge: true });
     } catch (e) {
       return json({ ok: false, error: 'edge: ' + (e && e.message || e) }, 500);
@@ -108,14 +109,14 @@ async function prefetch(env, token, role, delayMs) {
 async function refreshAll(env) { await invalidate(env); await withSvc(env, (t) => prefetch(env, t, 'viewer', 0)); }
 
 // ─── /api
-const READS = { kzwGetRange: 1, kzwGetCellFormula: 1, kzwEdgeStatus: 1, kzwEdgeSig: 1, kzwBootMeta: 1 };
+const READS = { kzwGetRange: 1, kzwGetCellFormula: 1, kzwEdgeStatus: 1, kzwEdgeSig: 1, kzwBootMeta: 1, kzwB24Status: 1, kzwB24Lookup: 1, kzwAdvisorDigestNow: 1 };
 function hashKeys(keys) { let h = 5381; const s = (keys || []).slice().sort().join('|'); for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
 
 async function api(req, url, env, ctx) {
   if (req.method === 'GET') { if (url.searchParams.get('ping')) return json({ ok: true, app: 'kz', ver: VER, edge: true, title: 'Контроль неснижаемого запаса' }); return json({ ok: false, error: 'POST {api,args}' }, 405); }
   let body; try { body = await req.json(); } catch (e) { return json({ ok: false, error: 'Неверный формат запроса' }); }
   const name = String(body.api || ''), args = Array.isArray(body.args) ? body.args : [];
-  if (!/^kzw[A-Z][A-Za-z0-9]*$/.test(name)) return json({ ok: false, error: 'Функция недоступна: ' + name });
+  if (!/^kzw[A-Z][A-Za-z0-9]*$/.test(name) || name === 'kzwB24Login') return json({ ok: false, error: 'Функция недоступна: ' + name });
   await ready(env);
   try { return okText(await handle(name, args, env, ctx)); }
   catch (e) { return json({ ok: false, error: String(e && e.message || e) }); }
@@ -136,6 +137,7 @@ async function handle(name, args, env, ctx) {
     case 'kzwReconcile': if (args[1]) return kvPut(env, 'recon', await gasRaw(env, name, args)); return viaCache(env, token, 'recon', 0, name, args);
     case 'kzwAnalogs': if (args[1]) return kvPut(env, 'anl', await gasRaw(env, name, args)); return viaCache(env, token, 'anl', 0, name, args);
     case 'kzwSnapshots': return viaCache(env, token, 'snap:' + hashKeys(args[1]), 0, name, args);
+    case 'kzwAdvisor': return viaCache(env, token, 'adv', 0, name, args);
     case 'kzwStatus': {
       const t = await gasRaw(env, name, args), st = JSON.parse(t);
       if (mem.lastBusy === true && st.busy === false) ctx.waitUntil(afterRebuild(env, token));
@@ -198,4 +200,55 @@ async function syncCheck(env) {
     if (mem.lastBusy === true || prev !== s.sig) { mem.lastBusy = false; await refreshAll(env); await stSet(env, 'sig', s.sig); }
     await env.DB.prepare('DELETE FROM sess WHERE at < ?').bind(Date.now() - 24 * 3600 * 1000).run();
   } catch (e) { await stSet(env, 'sig_err', String(e && e.message || e)); }
+}
+
+// ─── /b24/* — локальное приложение Битрикс24 (серверное): Битрикс открывает /b24/app POST-запросом
+//     с DOMAIN, AUTH_ID, PLACEMENT, PLACEMENT_OPTIONS; пользователь проверяется user.current на портале,
+//     роль и токен выдаёт Apps Script (kzwB24Login, ключ EDGE_KEY). /b24/install — установка (вкладка в сделке).
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const page = (body, status) => new Response('<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Контроль запаса</title><style>body{font:14px/1.4 Arial,sans-serif;margin:0;padding:14px;color:#222;background:#fff}h3{margin:0 0 10px;color:#1f3864}table{border-collapse:collapse;width:100%;font-size:13px}th,td{border:1px solid #d0d4d9;padding:5px 8px;vertical-align:top}th{background:#1f3864;color:#fff;text-align:left}.st{display:inline-block;padding:2px 8px;border-radius:5px;font-weight:bold;font-size:12px}.red{background:#f8cbad;color:#7a1c00}.yel{background:#ffe699;color:#7a5a00}.grn{background:#c6e0b4;color:#1e5e1e}.none{background:#eee;color:#666}.exc{background:#e7e6e6;color:#555;text-decoration:line-through}.hint{color:#666;font-size:12px}a{color:#1a4d8f}.num{text-align:right;white-space:nowrap}.alt{color:#555;font-size:12px;margin-top:3px}button{background:#1a73e8;color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;font:inherit}</style></head><body>' + body + '</body></html>', { status: status || 200, headers: { 'content-type': 'text/html;charset=utf-8', 'cache-control': 'no-store' } });
+async function b24rest(env, domain, auth, method, params) {
+  const base = env.B24_TEST_BASE ? env.B24_TEST_BASE : 'https://' + domain + '/rest';
+  const r = await fetch(base + '/' + method + '.json', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({}, params || {}, { auth })) });
+  try { return await r.json(); } catch (e) { return { error: 'bad_response' }; }
+}
+function stCls(st) { st = String(st || ''); if (st.indexOf('— исключено') === 0) return 'exc'; if (st.indexOf('КРАСНЫЙ') === 0) return 'red'; if (st.indexOf('ЖЁЛТЫЙ') === 0) return 'yel'; if (st.indexOf('ОК') === 0) return 'grn'; return 'none'; }
+async function b24(req, url, env, ctx) {
+  await ready(env);
+  const p = url.pathname.slice(5);
+  let form = null; if (req.method === 'POST') { try { form = await req.formData(); } catch (e) { form = null; } }
+  const g = (k) => String((form && form.get(k)) || url.searchParams.get(k) || '');
+  const domain = g('DOMAIN').toLowerCase(), auth = g('AUTH_ID'), placement = g('PLACEMENT') || 'DEFAULT';
+  let opts = {}; try { opts = JSON.parse(g('PLACEMENT_OPTIONS') || '{}') || {}; } catch (e) {}
+  if (!domain || !auth) return page('<h3>Контроль неснижаемого запаса</h3><p>Эта страница открывается из Битрикс24 (приложение в левом меню или вкладка «Остатки на складе» в сделке).</p>', 400);
+  if (!/^[a-z0-9.-]+$/.test(domain)) return page('<p>Неверный адрес портала.</p>', 400);
+  const me = await b24rest(env, domain, auth, 'user.current', {});
+  if (!me || !me.result) return page('<p>Не удалось проверить пользователя Битрикс24: ' + esc(me && (me.error_description || me.error) || 'нет ответа') + '</p>', 403);
+  const u = me.result, name = ((u.NAME || '') + ' ' + (u.LAST_NAME || '')).trim();
+  if (p === 'install') {
+    const handler = url.origin + '/b24/app', out = [];
+    for (const pl of ['CRM_DEAL_DETAIL_TAB']) {
+      await b24rest(env, domain, auth, 'placement.unbind', { PLACEMENT: pl, HANDLER: handler });
+      const r = await b24rest(env, domain, auth, 'placement.bind', { PLACEMENT: pl, HANDLER: handler, TITLE: 'Остатки на складе', DESCRIPTION: 'Контроль неснижаемого запаса: остатки, статусы и аналоги по товарам сделки' });
+      out.push(pl + ': ' + (r && r.result ? 'подключено' : 'ошибка — ' + esc(r && (r.error_description || r.error) || '')));
+    }
+    return page('<h3>Установка «Контроль неснижаемого запаса»</h3><p>Портал: <b>' + esc(domain) + '</b>, установил: ' + esc(name) + '.</p><ul>' + out.map(x => '<li>' + x + '</li>').join('') + '</ul><p class="hint">Пункт левого меню включается в настройках приложения («Показывать в левом меню»). В программе (WIZARD → Пароль → Битрикс24) должен быть указан домен портала <b>' + esc(domain) + '</b> и список сотрудников с уровнем WIZARD.</p><p><button onclick="finish()">Завершить установку</button></p><script src="//api.bitrix24.com/api/v1/"></script><script>function finish(){try{BX24.init(function(){BX24.installFinish();});}catch(e){alert("Готово — закройте окно");}}</script>');
+  }
+  let lg; try { lg = await gas(env, 'kzwB24Login', [env.EDGE_KEY, { domain, userId: String(u.ID), email: u.EMAIL || '', name, admin: !!u.ADMIN }]); }
+  catch (e) { return page('<h3>Вход через Битрикс24 не выполнен</h3><p>' + esc(e.message) + '</p><p class="hint">WIZARD: откройте программу → «Пароль» → блок «Битрикс24» и укажите домен портала ' + esc(domain) + '.</p>', 403); }
+  await sessPut(env, lg.token, lg.role);
+  if (/^CRM_(DEAL|LEAD|SMART_INVOICE|QUOTE)_DETAIL_TAB$/.test(placement)) {
+    const id = opts.ID || opts.id || '';
+    const method = placement === 'CRM_LEAD_DETAIL_TAB' ? 'crm.lead.productrows.get' : (placement === 'CRM_QUOTE_DETAIL_TAB' ? 'crm.quote.productrows.get' : 'crm.deal.productrows.get');
+    const pr = await b24rest(env, domain, auth, method, { id });
+    const rows = (pr && pr.result) || [];
+    if (!rows.length) return page('<h3>Остатки на складе</h3><p class="hint">В ' + (placement === 'CRM_LEAD_DETAIL_TAB' ? 'лиде' : 'сделке') + ' нет товаров' + (pr && pr.error_description ? ' (' + esc(pr.error_description) + ')' : '') + '.</p>');
+    let look = []; try { look = await gas(env, 'kzwB24Lookup', [lg.token, rows.map(r => ({ name: r.PRODUCT_NAME, code: r.PRODUCT_CODE || '', qty: r.QUANTITY }))]); } catch (e) { return page('<p>Ошибка поиска: ' + esc(e.message) + '</p>', 500); }
+    const link = (k) => url.origin + '/?b24tok=' + encodeURIComponent(lg.token) + '&b24=1&key=' + encodeURIComponent(k);
+    const line = (f) => '<span class="st ' + stCls(f.stat) + '">' + esc(f.stat) + '</span> <a href="' + link(f.key) + '" target="_blank">' + esc(f.key) + '</a> ' + esc(f.name) + (f.brand ? ' · ' + esc(f.brand) : '') + ' — остаток <b>' + esc(f.tot) + '</b>' + (f.min !== null && f.min !== undefined ? ' / мин. ' + esc(f.min) : '') + (f.grp ? ' · группа ' + esc(f.grp) + ' (' + esc(f.grpTot) + ')' : '');
+    const trs = look.map(q => '<tr><td>' + esc(q.name) + (q.code ? '<div class="hint">' + esc(q.code) + '</div>' : '') + '</td><td class="num">' + esc(q.qty) + '</td><td>' + (q.found.length ? q.found.map(f => '<div>' + line(f) + (q.qty > f.tot ? ' <span class="st red">не хватает ' + esc(Math.round((q.qty - f.tot) * 1000) / 1000) + '</span>' : '') + '</div>').join('') : '<span class="hint">не найдено в контроле запаса</span>') + (q.alt.length ? '<div class="alt">Аналоги (группа замен): ' + q.alt.map(a => esc(a.key) + ' — ' + esc(a.tot)).join('; ') + '</div>' : '') + '</td></tr>').join('');
+    return page('<h3>Остатки на складе по товарам</h3><table><tr><th>Товар в сделке</th><th>Кол-во</th><th>Позиция склада · статус · остаток в контроле</th></tr>' + trs + '</table><p class="hint">Данные 1С из программы «Контроль неснижаемого запаса». <a href="' + url.origin + '/?b24tok=' + encodeURIComponent(lg.token) + '&b24=1" target="_blank">Открыть программу</a> · ' + esc(name) + ' (' + (lg.role === 'wizard' ? 'WIZARD' : 'ПРОСМОТР') + ')</p>');
+  }
+  // приложение целиком (левое меню): передаём токен странице
+  return new Response(null, { status: 303, headers: { location: url.origin + '/?b24tok=' + encodeURIComponent(lg.token) + '&b24=1' } });
 }
