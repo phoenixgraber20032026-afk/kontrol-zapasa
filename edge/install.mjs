@@ -1,4 +1,4 @@
-// Установка / обновление ускорителя kz-edge (Cloudflare Workers + D1). Запуск: УСТАНОВКА.cmd или ОБНОВИТЬ.cmd
+// Установка / обновление ускорителя kz-edge (Cloudflare Workers + D1). Запуск: install.cmd или update.cmd
 // Требуется Node.js 18+. Аккаунт Cloudflare — бесплатный.
 import { execSync, spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -24,6 +24,21 @@ function runOut(args) { const r = spawnSync(W[0], W.slice(1).concat(args), { cwd
   log('1/5  Сборка страницы (edge/public из app/)…');
   execSync('node tools/build.mjs', { cwd: root, stdio: 'inherit' });
 
+  // Восстановление настроек, если wrangler.toml перезаписан новым архивом (REPLACE_WITH_…): берём из CONNECT.txt или из Cloudflare
+  const keyFile = join(here, 'CONNECT.txt'), saved = existsSync(keyFile) ? readFileSync(keyFile, 'utf8') : '';
+  if (update && /REPLACE_WITH/.test(toml)) {
+    log('Настройки в wrangler.toml сброшены (новый архив распакован поверх старого) — восстанавливаю…');
+    run(['whoami']);
+    let gas = (saved.match(/GAS_URL:\s*(\S+)/) || [])[1];
+    if (!gas) { const rl = createInterface({ input: process.stdin, output: process.stdout }); gas = (await rl.question('\nАдрес веб-приложения Apps Script (…/exec): ')).trim().replace(/\/dev$/, '/exec').replace(/\?.*$/, ''); rl.close(); }
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(gas)) { console.error('Это не ссылка /exec'); process.exit(1); }
+    toml = toml.replace(/GAS_URL = "[^"]*"/, `GAS_URL = "${gas}"`);
+    let id = (saved.match(/D1_ID:\s*(\S+)/) || [])[1];
+    if (!id) { const out = runOut(['d1', 'list', '--json']); try { id = (JSON.parse(out.slice(out.indexOf('['))).find(d => d.name === 'kz-db') || {}).uuid; } catch (e) {} }
+    if (!id) { console.error('Не удалось определить ID базы kz-db — откройте панель Cloudflare → Storage & Databases → D1 → kz-db и впишите database_id в wrangler.toml'); process.exit(1); }
+    toml = toml.replace('REPLACE_WITH_D1_ID', id);
+    writeFileSync(join(here, 'wrangler.toml'), toml);
+  }
   if (!update) {
     log('2/5  Вход в Cloudflare (откроется браузер; если аккаунта нет — зарегистрируйте бесплатный)…');
     run(['login'], { soft: true });
@@ -51,18 +66,16 @@ function runOut(args) { const r = spawnSync(W[0], W.slice(1).concat(args), { cwd
 
   log('4/5  Публикация Worker…');
   let deployOut = '', ok = false;
-  for (let i = 1; i <= 6 && !ok; i++) { deployOut = runOut(['deploy']); ok = /workers\.dev|Deployed|Uploaded/.test(deployOut) && !/ERROR|Error:/.test(deployOut); if (!ok) { console.log(`Повтор ${i}/6 через 10 с…`); execSync(process.platform === 'win32' ? 'timeout /t 10 >nul' : 'sleep 10', { stdio: 'ignore', shell: true }); } }
+  for (let i = 1; i <= 6 && !ok; i++) { deployOut = runOut(['deploy']); ok = /workers\.dev|Deployed|Uploaded/.test(deployOut) && !/ERROR|Error:/.test(deployOut); if (!ok) { console.log(`Повтор ${i}/6 через 10 с…`); Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10000); } }
   if (!ok) { console.error('Публикация не удалась — см. вывод выше'); process.exit(1); }
   const url = (deployOut.match(/https:\/\/kz-edge[\w.-]*\.workers\.dev/) || [])[0] || '(адрес см. в панели Cloudflare → Workers → kz-edge)';
 
-  const keyFile = join(here, 'ПОДКЛЮЧЕНИЕ.txt');
-  let key = '';
-  if (existsSync(keyFile)) key = (readFileSync(keyFile, 'utf8').match(/EDGE_KEY:\s*(\S+)/) || [])[1] || '';
+  let key = (saved.match(/EDGE_KEY:\s*(\S+)/) || [])[1] || '';
   if (!key || !update) {
     log('5/5  Ключ EDGE_KEY…');
     key = key || randomBytes(24).toString('base64url');
     run(['secret', 'put', 'EDGE_KEY'], { input: key + '\n' });
   }
-  writeFileSync(keyFile, `Ускоритель «Контроль неснижаемого запаса» — подключение\n\nАдрес ускорителя: ${url}\nEDGE_KEY: ${key}\n\n1. Откройте программу как WIZARD → вкладка «Пароль» → блок «⚡ Ускоритель Cloudflare»: вставьте адрес и ключ → «Подключить».\n2. Сотрудникам дайте адрес ускорителя как ссылку на программу (ПРОСМОТР без пароля). В настольной версии и на сайте GitHub его можно указать как «Адрес программы Google».\n3. Обновление после замены файлов: ОБНОВИТЬ.cmd.\n\nВыпущено: ${new Date().toLocaleString('ru-RU')}\n`, 'utf8');
-  log(`Готово. Адрес ускорителя: ${url}\nКлюч и инструкция — в файле ПОДКЛЮЧЕНИЕ.txt (не выкладывайте его в репозиторий: он в .gitignore).`);
+  writeFileSync(keyFile, `Ускоритель «Контроль неснижаемого запаса» — подключение\n\nАдрес ускорителя: ${url}\nEDGE_KEY: ${key}\nGAS_URL: ${(toml.match(/GAS_URL = "([^"]*)"/) || [])[1] || ''}\nD1_ID: ${(toml.match(/database_id = "([^"]*)"/) || [])[1] || ''}\n\n1. Откройте программу как WIZARD → вкладка «Пароль» → блок «⚡ Ускоритель Cloudflare»: вставьте адрес и ключ → «Подключить».\n2. Сотрудникам дайте адрес ускорителя как ссылку на программу (ПРОСМОТР без пароля). В настольной версии и на сайте GitHub его можно указать как «Адрес программы Google».\n3. Обновление после замены файлов: update.cmd. Этот файл хранит ключ и адреса — не удаляйте его и не выкладывайте в репозиторий.\n\nВыпущено: ${new Date().toLocaleString('ru-RU')}\n`, 'utf8');
+  log(`Готово. Адрес ускорителя: ${url}\nКлюч и инструкция — в файле CONNECT.txt (не выкладывайте его в репозиторий: он в .gitignore).`);
 })().catch(e => { console.error('\nОшибка: ' + e.message); process.exit(1); });
