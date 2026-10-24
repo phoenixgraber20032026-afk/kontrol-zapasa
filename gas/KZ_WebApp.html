@@ -119,6 +119,7 @@
   @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,80,60,.9)}50%{box-shadow:0 0 0 9px rgba(255,80,60,0)}}
   .alertbox{position:fixed;right:14px;top:60px;width:min(460px,calc(100vw - 28px));background:#fff;border:2px solid #d93025;border-radius:12px;box-shadow:0 14px 40px rgba(0,0,0,.35);z-index:60;padding:12px 14px;animation:ain .3s}
   @keyframes ain{from{transform:translateY(-12px);opacity:0}to{transform:none;opacity:1}}
+  .alertbox.advbox{border-color:#e6a700;top:60px}.alertbox.advbox h3{color:#8a6d00}.alertbox.advbox a{color:var(--hdr)}
   .alertbox h3{margin:0 0 6px;color:#b3261e;font-size:15px;display:flex;align-items:center;gap:8px}
   .alertbox ul{margin:6px 0;padding-left:18px;max-height:220px;overflow:auto;font-size:12.5px}
   .alertbox li{margin:2px 0}
@@ -126,6 +127,17 @@
   body.alarm header{box-shadow:inset 0 -3px 0 #ff5a3c}
   body.offline header{filter:grayscale(.5)}
   body.offline .wiz-only,body.offline #itemSave,body.offline #grpSave{display:none !important}
+  /* v2.0: Советник */
+  .adv-alert{border:1px solid #d9e2ec;border-left:6px solid #90a4b8;border-radius:8px;padding:10px 12px;margin:8px 0;background:#fff}
+  .adv-alert.red{border-left-color:#d93025;background:#fff6f4}.adv-alert.yel{border-left-color:#e6a700;background:#fffbea}.adv-alert.info{border-left-color:#1a73e8;background:#f3f7fd}
+  .adv-alert .t{font-weight:bold;font-size:14px;color:var(--hdr)}.adv-alert .x{font-size:12.5px;color:#444;margin-top:3px}.adv-alert .chips{margin-top:6px;line-height:1.9}.adv-alert .actions{margin-top:6px;justify-content:flex-start}
+  .adv-alert.flash{box-shadow:0 0 0 3px #ffd54f}
+  .adv-chip{display:inline-block;background:#eef2f7;border:1px solid #d0d9e4;border-radius:10px;padding:0 7px;font-size:11.5px;margin:0 4px 2px 0;color:var(--hdr);text-decoration:none;font-family:monospace}.adv-chip:hover{background:#dde6f2}.adv-chip.bad{background:#fdecea;border-color:#f0b494;color:#b3261e}
+  .adv-flag{display:inline-block;border-radius:8px;padding:0 6px;font-size:10.5px;background:#eee;color:#444;white-space:nowrap}.adv-flag.order{background:#fdecea;color:#b3261e}.adv-flag.soon,.adv-flag.min_low,.adv-flag.nomin,.adv-flag.reserve{background:#fff3cd;color:#8a6d00}.adv-flag.transit{background:#e6f4ea;color:#1e7e34}.adv-flag.dead{background:#e8e8e8;color:#555}.adv-flag.min_high{background:#e8f0fe;color:#1a4d8f}
+  .abc{display:inline-block;width:20px;text-align:center;border-radius:4px;font-weight:bold;font-size:11px}.abc.A{background:#d93025;color:#fff}.abc.B{background:#e6a700;color:#fff}.abc.C{background:#ddd;color:#555}
+  .adv-list{margin:4px 0;padding-left:18px;font-size:13px}.adv-list li{margin:3px 0}.adv-list a{color:var(--hdr)}
+  #advBtn.adv-red{background:#fdecea;color:#b3261e;border-color:#f0b494}#advBtn.adv-yel{background:#fff3cd;color:#8a6d00}
+  b.red{color:#b3261e}b.yel{color:#9a6700}
   /* v1.6: выпадающий список с мультивыбором */
   .msel{position:relative;display:inline-block}
   .msel>button{background:#fff;border:1px solid #bbb;border-radius:6px;padding:6px 26px 6px 8px;cursor:pointer;text-align:left;min-width:190px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;position:relative}
@@ -290,7 +302,7 @@
       <div class="actions"><button class="primary" id="apiSave">Проверить и сохранить</button></div>
     </div>
   </div>
-  <p class="hint" style="margin-top:14px;opacity:.6">Контроль неснижаемого запаса · v1.8 · <span id="modeLabel"></span></p>
+  <p class="hint" style="margin-top:14px;opacity:.6">Контроль неснижаемого запаса · v2.0 · <span id="modeLabel"></span></p>
 </div>
 
 <!-- ПРИЛОЖЕНИЕ -->
@@ -301,6 +313,7 @@
   <span class="badge" id="roleBadge"></span>
   <span class="fsbox" title="Размер шрифта"><button class="linkbtn" id="fsMinus">A−</button><span id="fsVal">100%</span><button class="linkbtn" id="fsPlus">A+</button></span>
   <button class="linkbtn alertbtn" id="alertBtn" style="display:none" title="Критические остатки — открыть список">🔴 0</button>
+  <button class="linkbtn alertbtn" id="advBtn" style="display:none" title="Советник — рекомендации по заказу и остаткам">💡 0</button>
   <button class="linkbtn" id="soundBtn" title="Звуковое предупреждение о новых критических остатках: вкл / выкл">🔔</button>
   <button class="linkbtn" id="switchBtn" title="Войти под другим уровнем">⇄ Уровень</button>
   <button class="linkbtn" id="refreshBtn" title="Перечитать данные из таблицы (без пересборки отчётов)">⟳</button>
@@ -308,6 +321,7 @@
 </header>
 <main>
   <div class="alertbox" id="alertBox" style="display:none"></div>
+  <div class="alertbox advbox" id="advBox" style="display:none"></div>
   <div class="msg info" id="offBar" style="display:none;margin-top:0"></div>
   <div class="msg" id="globalMsg"></div>
   <div id="stateBanner"></div>
@@ -366,6 +380,57 @@
       <div class="kpis" id="cKpis"></div>
       <div class="tablewrap"><table class="grid" id="cTable"><thead></thead><tbody></tbody></table></div>
       <p class="hint">Дефицит до минимума = минимум − остаток в контроле. «К заказу до целевого» = целевой запас − остаток (если целевой задан, иначе — до минимума). Сумма — по средней цене позиции. Позиция, которую покрывает её группа замен (остаток группы выше порога), сюда не попадает; если группа в сумме не покрывает порог — она показана <b>одной строкой</b> с дефицитом группы (заказать нужно одну из её позиций, не все). Исключённые (снятые с производства / нерелевантные) позиции не показываются.</p>
+    </div>
+  </section>
+
+  <!-- v2.0: СОВЕТНИК -->
+  <section id="view-advisor" style="display:none">
+    <div class="panel">
+      <div class="toolbar">
+        <h3 style="margin:0;color:var(--hdr)">💡 Советник</h3>
+        <span class="hint" id="advInfo" style="margin-left:auto"></span>
+        <button class="secondary" id="advRefresh" title="Пересчитать рекомендации по текущим данным">⟳ Пересчитать</button>
+        <button class="secondary wiz-only" id="advSettingsBtn" style="display:none" title="Сроки поставки, страховой запас, классы ABC/XYZ, сезонность, наборы, резерв Битрикс24, еженедельная сводка">⚙ Параметры</button>
+      </div>
+      <div class="kpis" id="advKpis"></div>
+      <div class="msg" id="advMsg"></div>
+      <div id="advBasis"></div>
+      <p class="hint">Советник считает расход каждой позиции по снимкам остатков (лист «Снимки остатков», пишется при каждой загрузке 1С), срок поставки по бренду, страховой запас и сезон → <b>точка заказа</b> и <b>расчётный минимум</b>; учитывает, что уже заказано (заказы «согласован» / «отправлен поставщику») и что обещано клиентам (товары открытых сделок Битрикс24); делит позиции на классы <b>ABC</b> (доля в стоимости расхода) и <b>XYZ</b> (стабильность расхода), находит залежалый запас и неполные наборы ТО.</p>
+    </div>
+    <div class="panel" id="advSettings" style="display:none">
+      <h3 style="margin:0 0 8px;color:#8E44AD">⚙ Параметры Советника · WIZARD</h3>
+      <div class="fields"></div>
+      <h4 style="margin:10px 0 4px;color:var(--hdr)">Сезонные коэффициенты расхода по типам (1 — обычный месяц, 1.5 — в полтора раза больше; пусто = 1)</h4>
+      <div id="advSeason"></div>
+      <div class="actions" style="justify-content:flex-start;margin-top:8px"><button class="primary" id="advSave">💾 Сохранить параметры</button><span class="hint">Хранятся в листе «Настройки» (webSettings → advisor) — для всех пользователей.</span></div>
+      <h4 style="margin:12px 0 4px;color:var(--hdr)">Битрикс24: резерв под сделки и еженедельная сводка</h4>
+      <div class="actions" style="justify-content:flex-start"><button class="secondary" id="advReserveBtn">⟳ Обновить резерв из открытых сделок</button><label class="hint"><input type="checkbox" id="advDigestOn"> сводка Советника каждый понедельник в 9:00 (уведомление в Битрикс24)</label><button class="secondary" id="advDigestNow">Отправить сводку сейчас</button></div>
+      <p class="hint" id="advReserveInfo"></p>
+      <div class="msg" id="advSetMsg"></div>
+    </div>
+    <div class="panel">
+      <h3 style="margin:0 0 6px;color:var(--hdr)">Рекомендации</h3>
+      <div id="advAlerts"><p class="hint">Загрузка…</p></div>
+    </div>
+    <div class="panel" id="advSetsPanel">
+      <h3 style="margin:0 0 6px;color:var(--hdr)">Наборы ТО (комплектность)</h3>
+      <div id="advSets"></div>
+    </div>
+    <div class="panel" id="advTablePanel">
+      <div class="toolbar">
+        <input type="search" id="advSearch" class="srch" placeholder="Поиск: ключ, артикул, наименование…">
+        <select id="advBrand"><option value="">Все бренды</option></select>
+        <select id="advType"><option value="">Все типы</option></select>
+        <select id="advCls"><option value="">Все классы</option><option value="A">класс A</option><option value="B">класс B</option><option value="AB">A и B</option><option value="C">класс C</option></select>
+        <select id="advFlag"><option value="">Все позиции</option><option value="order">Заказать сейчас</option><option value="soon">Скоро точка заказа</option><option value="nomin">Расход есть, минимума нет</option><option value="min_low">Минимум занижен</option><option value="min_high">Минимум завышен</option><option value="transit">В пути</option><option value="reserve">Резерв Б24</option><option value="dead">Залежалый запас</option><option value="rate">С измеренным расходом</option><option value="excl">Исключённые</option></select>
+        <button class="secondary" id="advKeysOff" style="display:none" title="Снять фильтр по позициям рекомендации">✕ все позиции</button>
+        <span class="hint" id="advCount" style="margin-left:auto"></span>
+        <button class="secondary" id="advCart" title="Добавить отмеченные в корзину заказа с рекомендуемым количеством">🛒 В корзину отмеченные</button>
+        <button class="secondary wiz-only" id="advMin" style="display:none" title="Записать расчётные минимумы отмеченных позиций в «Справочник»">Принять расч. минимумы</button>
+        <button class="secondary" id="advCsv">⬇ CSV</button>
+      </div>
+      <div class="tablewrap" style="max-height:60vh"><table class="grid" id="advTable"><thead></thead><tbody></tbody></table></div>
+      <p class="hint">Доступно = остаток + в пути − резерв. Хватит, дн. = доступно ÷ расход в день. Точка заказа = расход × срок поставки × (1 + страховой запас) с учётом сезона — когда доступно опускается до неё, пора заказывать. Расчётный минимум = точка заказа (его можно принять как минимум «Справочника»). Рекомендуемое кол-во закрывает срок поставки + период между заказами (не меньше дефицита до целевого). Класс A/B/C — по доле в стоимости расхода (при отсутствии истории — в стоимости запаса), X/Y/Z — по стабильности расхода между снимками. Клик по заголовку — сортировка, по первой ячейке шапки — отметить все.</p>
     </div>
   </section>
 
@@ -626,6 +691,14 @@
         <p><b>Критический запас</b> (столбец M «Справочника»): если задан — остаток ≤ критического даёт КРАСНЫЙ («ниже критического»), остаток ≤ минимального — ЖЁЛТЫЙ, выше — ОК. Если не задан — прежняя логика: ниже минимума КРАСНЫЙ, до минимума × (1 + порог %) ЖЁЛТЫЙ. Формулы статуса в «Остатках» приложение дописывает само после каждой пересборки.</p></details>
       <details><summary>Критический запас</summary>
         <p>Красные и жёлтые позиции, отсортированные по приоритету и дефициту. Колонка «К заказу» = целевой − остаток (если целевой задан) иначе минимум − остаток; «Сумма» — к заказу × средняя цена. ⬇ CSV — заявка на пополнение.</p></details>
+      <details><summary>💡 Советник (v2.0)</summary>
+        <p>Вкладка «Советник» — рекомендации по заказу и остаткам и «на что обратить внимание». Значок <b>💡 N</b> в шапке — число рекомендаций (красный — есть срочные); при появлении новых срочных рекомендаций всплывает подсказка. Блок Советника есть и на дашборде, в карточке позиции и в столбце «💡 Советник» вкладки «Заказ».</p>
+        <p><b>Откуда расход.</b> При каждой загрузке 1С на лист «Снимки остатков» пишется снимок остатков. Уменьшение остатка между снимками = расход (поступления не считаются). Нужно минимум 2 снимка за 14 дней; чем регулярнее загрузки (лучше ежедневно), тем точнее. Пока истории нет, Советник работает по светофору и минимумам.</p>
+        <p><b>Расчёт.</b> Расход в день × срок поставки (по бренду или общий) × (1 + страховой запас %) × сезонный коэффициент = <b>точка заказа</b> = <b>расчётный минимум</b>. Доступно = остаток + в пути (заказы «согласован» / «отправлен поставщику») − резерв под открытые сделки Битрикс24. Хватит дней = доступно ÷ расход в день. Когда доступно ≤ точки заказа — «Заказать сейчас», рекомендуемое количество закрывает срок поставки + период между заказами (не меньше дефицита до целевого). <b>ABC</b>: A — позиции, дающие первые 80 % стоимости расхода (без истории — стоимости запаса), B — до 95 %, C — остальное. <b>XYZ</b>: X — стабильный расход (коэффициент вариации ≤ 0,5), Y — колеблющийся (≤ 1), Z — непредсказуемый. Срочные рекомендации поднимаются для классов A и B (настраивается).</p>
+        <p><b>Рекомендации:</b> заказать на этой неделе; точка заказа через 1–2 недели; красные A/B-позиции без заказа; не хватает под сделки Битрикс24; есть расход, но нет минимума; минимум занижен / завышен (принять расчётные минимумы — одной кнопкой, WIZARD); заказы дольше срока поставки; залежалый запас (без движения дольше 365 дней — кандидаты в исключения); сезонный рост в следующем месяце; неполные наборы ТО; исключённые позиции с остатком. Кнопки: «Показать в таблице», «🛒 В корзину заказа» (с рекомендуемым количеством), «Принять расчётные минимумы», «Исключить».</p>
+        <p><b>Автозакрытие заказов.</b> Если после загрузки 1С остаток позиций заказа «отправлен поставщику» вырос не меньше чем на половину заказанного — заказ автоматически переводится в «получен».</p>
+        <p><b>Наборы ТО</b> — лист «Наборы» (Набор; ключ или артикул; кол-во): Советник показывает, сколько комплектов можно собрать и чего не хватает. Загружаются списком на вкладке (WIZARD).</p>
+        <p><b>Параметры (WIZARD, ⚙):</b> срок поставки по умолчанию и по брендам, страховой запас, период между заказами, границы ABC/XYZ, порог залежалости, сезонные коэффициенты по типам и месяцам, учёт резерва Битрикс24, классы для срочных рекомендаций. При подключённом Битрикс24 (вкладка «Пароль») — обновление резерва из открытых сделок (автоматически при каждой загрузке 1С) и еженедельная сводка по понедельникам в 9:00; ссылка <code>…/?tab=advisor</code> открывает Советник сразу.</p></details>
       <details><summary>Заказ (песочница)</summary>
         <p>Вкладка «Заказ» собирает кандидатов на пополнение: по умолчанию красные и жёлтые позиции (можно: только красные, все с дефицитом до целевого, все позиции), фильтр по <b>нескольким брендам сразу</b> (выпадающий список с галочками), типу, поиску. В каждой строке — всё для решения: остаток на выбранных складах, минимум / критический / целевой, дефицит, рекомендуемое количество (до целевого, иначе до минимума), средняя цена и сумма, последнее поступление и поставщик последней партии, группа замен и её остаток, а также отметка «уже в заказе», если позиция есть в сохранённом заказе со статусом «согласован» или «отправлен поставщику». Позиции одной <b>непокрытой группы замен</b> показываются одной строкой группы: заказать нужно одну из них (выбирается в строке), а не все. Отмеченные строки попадают в <b>корзину</b> — там правятся количество и примечание, считается сумма; корзина хранится в браузере. ⬇ CSV / 📋 Копировать — заявка поставщику. WIZARD сохраняет корзину на лист «Заказы» и затем ведёт статус заказа (черновик → согласован → отправлен поставщику → получен / отменён); любой сохранённый заказ можно снова загрузить в корзину.</p></details>
       <details><summary>Исключения (снятые с производства, нерелевантные)</summary>
@@ -709,15 +782,30 @@
     </div>
     <div class="panel" style="max-width:720px">
       <h3 style="margin-top:0;color:var(--hdr)">⚡ Ускоритель Cloudflare</h3>
-      <p class="hint">Worker <b>kz-edge</b> держит готовую копию данных и отдаёт страницу и пакет за доли секунды; все записи по-прежнему идут в Google-таблицу. Адрес и ключ — из файла ПОДКЛЮЧЕНИЕ.txt после установки (папка <code>edge</code> репозитория, УСТАНОВКА.cmd).</p>
+      <p class="hint">Worker <b>kz-edge</b> держит готовую копию данных и отдаёт страницу и пакет за доли секунды; все записи по-прежнему идут в Google-таблицу. Адрес и ключ — из файла CONNECT.txt после установки (папка <code>edge</code> репозитория, УСТАНОВКА.cmd).</p>
       <div id="edgeInfo" class="hint" style="margin-bottom:8px">Состояние не проверялось.</div>
       <div class="fields">
         <div class="field"><label>Адрес ускорителя</label><input type="text" id="edgeUrl" placeholder="https://kz-edge.xxxx.workers.dev"></div>
-        <div class="field"><label>Ключ EDGE_KEY</label><input type="text" id="edgeKey" placeholder="из ПОДКЛЮЧЕНИЕ.txt" autocomplete="off"></div>
+        <div class="field"><label>Ключ EDGE_KEY</label><input type="text" id="edgeKey" placeholder="из CONNECT.txt" autocomplete="off"></div>
       </div>
       <div class="msg" id="edgeMsg"></div>
       <div class="actions"><button class="secondary" id="edgeCheck">Проверить</button><button class="danger" id="edgeOff">Отключить</button><button class="primary" id="edgeSave">Подключить</button></div>
       <p class="hint">После подключения дайте сотрудникам адрес ускорителя как ссылку на программу (или укажите его как «Адрес программы Google» в настольной версии / на сайте GitHub) — они увидят ту же программу, но быстрее. Apps Script сам сообщает ускорителю о каждой правке; раз в 5 минут ускоритель дополнительно сверяет данные с таблицей.</p>
+    </div>
+    <div class="panel" style="max-width:720px">
+      <h3 style="margin-top:0;color:var(--hdr)">🔗 Битрикс24</h3>
+      <p class="hint">Программа как приложение Битрикс24 (через ускоритель): пункт в левом меню со входом по учётной записи Битрикс24, вкладка «Остатки на складе» в сделке, уведомления о новых критических остатках после загрузки 1С. Адреса для администратора портала появятся ниже после подключения ускорителя.</p>
+      <div id="b24Info" class="hint" style="margin-bottom:8px">Состояние не проверялось.</div>
+      <div class="fields">
+        <div class="field"><label>Домен портала</label><input type="text" id="b24Domain" placeholder="company.bitrix24.by"></div>
+        <div class="field"><label>Сотрудники с уровнем WIZARD (e-mail или ID Битрикс24, через запятую)</label><input type="text" id="b24Wizards" placeholder="ivanov@firma.by, 7"></div>
+        <div class="field" style="grid-column:1/-1"><label>Входящий вебхук (Разработчикам → Другое → Входящий вебхук; права: im, user)</label><input type="text" id="b24Hook" placeholder="https://company.bitrix24.by/rest/1/xxxxxxxxxxxx" autocomplete="off"></div>
+        <div class="field"><label>Получатели уведомлений (ID пользователей или chatNN, через запятую)</label><input type="text" id="b24Notify" placeholder="1, 7, chat25"></div>
+        <div class="field"><label>&nbsp;</label><label class="hint" style="display:flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="b24NotifyOn" checked> уведомлять о новых КРАСНЫХ после каждой загрузки 1С</label></div>
+      </div>
+      <div class="msg" id="b24Msg"></div>
+      <div class="actions"><button class="secondary" id="b24Check">Проверить</button><button class="secondary" id="b24Test">Пробное уведомление</button><button class="primary" id="b24Save">Сохранить</button></div>
+      <div id="b24Addr" class="hint"></div>
     </div>
   </section>
 </main>
@@ -814,8 +902,15 @@
     return String(u || '').trim();
   }
   function setApiUrl(u) { u = String(u || '').trim(); try { if (u) localStorage.setItem('kzw_api', u); else localStorage.removeItem('kzw_api'); } catch (e) {} }
-  (function () {   // ?api=… в адресе страницы — запомнить
-    try { var m = location.search.match(/[?&]api=([^&]+)/); if (m) { setApiUrl(decodeURIComponent(m[1])); if (history.replaceState) history.replaceState(null, '', location.pathname + location.hash); } } catch (e) {}
+  S.b24 = false; S.openKey = '';
+  (function () {   // ?api=… — запомнить адрес; ?b24tok=… — вход из Битрикс24 (токен выдан Worker'ом); ?key=… — открыть карточку позиции
+    try {
+      var q = location.search, m = q.match(/[?&]api=([^&]+)/); if (m) setApiUrl(decodeURIComponent(m[1]));
+      var t = q.match(/[?&]b24tok=([^&]+)/); if (t) { try { localStorage.setItem('kzw_token', decodeURIComponent(t[1])); } catch (e1) {} S.b24 = true; }
+      if (/[?&]b24=1/.test(q)) S.b24 = true;
+      var k = q.match(/[?&]key=([^&]+)/); if (k) S.openKey = decodeURIComponent(k[1].replace(/\+/g, ' '));
+      if ((m || t || k) && history.replaceState) history.replaceState(null, '', location.pathname + location.hash);
+    } catch (e) {}
   })();
   /** Один вызов серверной функции в любом режиме; quiet — без индикатора ожидания (опрос состояния). */
   function rpc(fn, args, quiet) {
@@ -1011,7 +1106,9 @@
       renderCustomTabs(); applyTabNames(); applyFont(); fillFilters(); fillSheetSelect();
       renderBanner(b.data.state);
       $('whStrip').style.display = ''; renderWhStrip();
-      renderAll(); checkAlerts(false);
+      renderAll(); checkAlerts(false); if (typeof advAfterLogin === 'function') advAfterLogin();
+      if (S.b24) { $('logoutBtn').style.display = 'none'; document.body.classList.add('b24'); }
+      if (S.openKey) { var ok = S.openKey; S.openKey = ''; setTimeout(function () { if (S.byKey[ok]) openItem(ok); else { $('iSearch').value = ok; showView('items'); } }, 300); }
       if (b.data.state && b.data.state.busy) startPoll();
     }).catch(function (e) {
       $('loginBtn').disabled = false;
@@ -1031,26 +1128,26 @@
     });
   }
   function refresh(silent) {
-    S.cache = { sheets: {}, charts: {} }; S.arr = null; S.snapCache = {}; S.supMap = null; S.orders = null;
+    S.cache = { sheets: {}, charts: {} }; S.arr = null; S.snapCache = {}; S.supMap = null; S.orders = null; S.adv = null;
     var btn = $('refreshBtn'), t0 = Date.now();
     if (!silent) { msg($('globalMsg'), 'Перечитываю данные из таблицы (обычно 3–8 секунд)…', 'info'); btn.disabled = true; btn.textContent = '⏳'; }
-    return call('kzwGetData', S.token).then(function (D) { applyData(D); fillFilters(); renderBanner(D.state); renderWhStrip(); renderAll(); checkAlerts(false); if (S.boot) { S.boot.data = D; saveOffline(S.boot); } if (!silent) msg($('globalMsg'), 'Данные обновлены из таблицы за ' + Math.round((Date.now() - t0) / 100) / 10 + ' с: позиций ' + D.items.length + ', групп ' + D.groups.length + ' · данные 1С от ' + (fmtDate(D.settings.lastLoad) || '—'), 'ok'); })
+    return call('kzwGetData', S.token).then(function (D) { applyData(D); fillFilters(); renderBanner(D.state); renderWhStrip(); renderAll(); checkAlerts(false); if (typeof advLoad === 'function') advLoad(true); if (S.boot) { S.boot.data = D; saveOffline(S.boot); } if (!silent) msg($('globalMsg'), 'Данные обновлены из таблицы за ' + Math.round((Date.now() - t0) / 100) / 10 + ' с: позиций ' + D.items.length + ', групп ' + D.groups.length + ' · данные 1С от ' + (fmtDate(D.settings.lastLoad) || '—'), 'ok'); })
       .catch(function (e) { msg($('globalMsg'), 'Не удалось обновить: ' + e.message, 'err'); })
       .then(function () { btn.disabled = false; btn.textContent = '⟳'; });
   }
   function renderAll() {
-    var v = currentView(), R = { dash: renderDash, items: renderItems, crit: renderCrit, wh: renderWh, brands: renderBrands, groups: renderGroups, hist: renderHist, load: renderLoad, order: renderOrder, excl: renderExcl };
+    var v = currentView(), R = { dash: renderDash, advisor: renderAdvisor, items: renderItems, crit: renderCrit, wh: renderWh, brands: renderBrands, groups: renderGroups, hist: renderHist, load: renderLoad, order: renderOrder, excl: renderExcl };
     if (R[v]) R[v]();
     if (v === 'recon') { S.recon = null; renderRecon(); } if (v === 'anl') { S.anl = null; renderAnl(); }
     if (typeof checkAlerts === 'function') checkAlerts(true);
   }
-  var VIEWS = ['dash', 'items', 'crit', 'order', 'excl', 'wh', 'brands', 'groups', 'hist', 'recon', 'anl', 'stat', 'load', 'sheets', 'page', 'builder', 'passwords', 'help'];
+  var VIEWS = ['dash', 'advisor', 'items', 'crit', 'order', 'excl', 'wh', 'brands', 'groups', 'hist', 'recon', 'anl', 'stat', 'load', 'sheets', 'page', 'builder', 'passwords', 'help'];
   function currentView() { for (var i = 0; i < VIEWS.length; i++) if ($('view-' + VIEWS[i]).style.display !== 'none') return VIEWS[i]; return 'dash'; }
   function showView(name) {
     document.querySelectorAll('.tab').forEach(function (x) { x.classList.toggle('active', x.dataset.tab === name); });
     VIEWS.forEach(function (v) { $('view-' + v).style.display = v === name ? '' : 'none'; });
     $('whStrip').style.display = ['load', 'builder', 'passwords', 'help', 'page', 'hist'].indexOf(name) === -1 ? '' : 'none'; renderWhStrip();
-    var R = { dash: renderDash, items: renderItems, crit: renderCrit, wh: renderWh, brands: renderBrands, groups: renderGroups, hist: renderHist, load: renderLoad, builder: renderBuilder, recon: renderRecon, anl: renderAnl, stat: renderStat, order: renderOrder, excl: renderExcl };
+    var R = { dash: renderDash, advisor: renderAdvisor, items: renderItems, crit: renderCrit, wh: renderWh, brands: renderBrands, groups: renderGroups, hist: renderHist, load: renderLoad, builder: renderBuilder, recon: renderRecon, anl: renderAnl, stat: renderStat, order: renderOrder, excl: renderExcl };
     if (R[name]) R[name]();
   }
   $('tabs').addEventListener('click', function (e) {
@@ -1061,8 +1158,8 @@
     withBusy(function () { showView(t.dataset.tab); });
   });
   function fillFilters() {
-    ['dType', 'iType', 'cType', 'wType', 'bType', 'oType'].forEach(function (id) { fillSel($(id), S.types, 'Все типы', true); });
-    ['dBrand', 'iBrand', 'cBrand', 'xBrand'].forEach(function (id) { fillSel($(id), S.brands, 'Все бренды', true); });
+    ['dType', 'iType', 'cType', 'wType', 'bType', 'oType', 'advType'].forEach(function (id) { fillSel($(id), S.types, 'Все типы', true); });
+    ['dBrand', 'iBrand', 'cBrand', 'xBrand', 'advBrand'].forEach(function (id) { fillSel($(id), S.brands, 'Все бренды', true); });
     fillBrandMsel();
     fillSel($('iWh'), S.whNames.concat([S.boot.whOut]), 'Остаток где угодно', true);
     var gsel = $('iGrp'), cur = gsel.value; gsel.innerHTML = '<option value="">Все группы замен</option><option value="__any">только в группах</option><option value="__no">без группы</option>' + S.groups.map(function (g) { return '<option value="' + esc(g.id) + '">' + esc(g.id + ' — ' + g.purpose) + '</option>'; }).join(''); gsel.value = cur;
@@ -1170,6 +1267,7 @@
     // история
     var hist = S.D.history.filter(function (h) { return h[2] === (type || 'Всего'); });
     var html = '';
+    if (typeof advDashCard === 'function') html += advDashCard();
     html += card('Структура статусов', canvasBox('chStat', 240));
     html += card('Статусы по типам', canvasBox('chType', 240));
     html += card('Остатки по складам (колонкам контроля), ед.', canvasBox('chWhQ', 260));
@@ -1335,7 +1433,7 @@
     var f = function (label, val, cls) { return '<div class="field ' + (cls || 'ro') + '"><label>' + label + '</label><input type="text" value="' + esc(val) + '"' + (cls ? ' id="' + cls.split(' ')[1] + '"' : ' readonly') + '></div>'; };
     $('itemBody').innerHTML = '<p>' + statBadge(it) + ' &nbsp; Ключ: <b>' + esc(it.key) + '</b> · Артикул: <b>' + esc(it.art || '—') + '</b> · ' + esc(it.brand) + ' · ' + esc(it.cat) + ' · ' + esc(it.type) + '</p>' +
       '<div class="kpis">' + kpi(fmtQ(it.tot) + ' <small>' + esc(it.unit) + '</small>', totLabel() + (whActive() ? ' (из ' + fmtQ(it.totAll) + ' всего)' : ''), it.cls === 'none' ? 'grey' : it.cls) + kpi(it.min === null ? '—' : fmtQ(it.min), 'Мин. запас') + kpi(it.crit === null || it.crit === undefined ? '—' : fmtQ(it.crit), 'Критический', it.crit !== null && it.crit !== undefined ? 'red' : 'grey') + kpi(it.tgt === null ? '—' : fmtQ(it.tgt), 'Целевой') + kpi(fmtQ(it.def), 'Дефицит до мин.', it.def > 0 ? 'red' : '') + kpi(fmtM(it.price), 'Ср. цена, BYN', 'money') + kpi(fmtM(it.value), 'Стоимость, BYN', 'money') + '</div>' +
-      '<h4 style="margin:10px 0 2px;color:var(--hdr)">Остатки: позиция и группа замен</h4>' + grpHtml + whb + '<p class="hint">Самая старая партия: ' + (fmtDate(it.old) || '—') + ' · последнее поступление: ' + (fmtDate(it.nw) || '—') + ' · строк в 1С: ' + it.rows + ' · статус в Справочнике: ' + esc(it.sprStat || '—') + '</p>' +
+      '<h4 style="margin:10px 0 2px;color:var(--hdr)">Остатки: позиция и группа замен</h4>' + grpHtml + whb + '<p class="hint">Самая старая партия: ' + (fmtDate(it.old) || '—') + ' · последнее поступление: ' + (fmtDate(it.nw) || '—') + ' · строк в 1С: ' + it.rows + ' · статус в Справочнике: ' + esc(it.sprStat || '—') + '</p>' + (typeof advItemHtml === 'function' ? advItemHtml(it) : '') +
       (wiz ? '<h4 style="margin:10px 0 6px;color:#8E44AD">Параметры контроля (лист «Справочник»)</h4><div class="fields">' +
         '<div class="field wiz"><label>Мин. запас</label><input type="text" id="eMin" value="' + (it.min === null ? '' : it.min) + '"></div>' +
         '<div class="field wiz"><label>Критический запас</label><input type="text" id="eCrit" value="' + (it.crit === null || it.crit === undefined ? '' : it.crit) + '" placeholder="пусто — по порогу %"></div>' +
@@ -1963,17 +2061,17 @@
     var red = rows.filter(function (x) { return x.cls === 'red'; }).length, yel = rows.filter(function (x) { return x.cls === 'yel'; }).length, osum = sum(rows, function (x) { return x.order * x.price; }), inCart = rows.filter(function (x) { return S.cart.lines[x.isGroup && x.rec ? x.rec.key : x.key]; }).length, ord = rows.filter(function (x) { return orderedInfo(x.isGroup && x.rec ? x.rec.key : x.key); }).length;
     $('oCount').textContent = 'Строк: ' + rows.length + (S.oBrandSel.length ? ' · бренды: ' + S.oBrandSel.join(', ') : '') + (whActive() ? ' · склады: ' + whLabel() : '');
     $('oKpis').innerHTML = kpi(fmtN(rows.length), 'Кандидатов на заказ', 'link', 'all') + kpi(fmtN(red), 'КРАСНЫХ', 'red') + kpi(fmtN(yel), 'ЖЁЛТЫХ', 'yel') + kpi(fmtQ(sum(rows, 'order')), 'Рекомендуемое кол-во, ед.') + kpi(fmtN(osum), 'Сумма по рекомендуемому, BYN', 'money') + kpi(fmtN(inCart), 'Уже в корзине', inCart ? 'grn' : 'grey') + kpi(fmtN(ord), 'Уже в оформленных заказах', ord ? 'grn' : 'grey') + kpi(fmtN(rows.filter(function (x) { return x.isGroup; }).length), 'Групп замен (одна строка — один заказ)', 'grey');
-    var H = ['', 'Статус', 'Ключ', 'Артикул', 'Наименование', 'Бренд', 'Тип', totLabel(), 'Мин.', 'Крит.', 'Целевой', 'Дефицит', 'Рекоменд. кол-во', 'Цена, BYN', 'Сумма, BYN', 'Последнее поступление', 'Поставщик последней партии', 'Группа / остаток группы', 'Уже в заказе', 'Комментарий', ''];
+    var H = ['', 'Статус', 'Ключ', 'Артикул', 'Наименование', 'Бренд', 'Тип', totLabel(), 'Мин.', 'Крит.', 'Целевой', 'Дефицит', 'Рекоменд. кол-во', '💡 Советник', 'Цена, BYN', 'Сумма, BYN', 'Последнее поступление', 'Поставщик последней партии', 'Группа / остаток группы', 'Уже в заказе', 'Комментарий', ''];
     $('oTable').querySelector('thead').innerHTML = '<tr>' + H.map(function (h) { return '<th class="nosort">' + esc(h) + '</th>'; }).join('') + '</tr>';
     $('oTable').querySelector('tbody').innerHTML = rows.slice(0, 1200).map(function (it) {
       var k = it.isGroup && it.rec ? it.rec.key : it.key, inc = !!S.cart.lines[k], oi = orderedInfo(k), sp = lastSup(k);
       var nameCell = it.isGroup ? esc(it.name) + '<br><span class="hint">заказать: </span><select data-recsel="' + esc(it.grp) + '" style="padding:1px 4px;font-size:11px;max-width:420px">' + it.members.filter(function (m) { return m.cls !== 'exc'; }).map(function (m) { return '<option value="' + esc(m.key) + '"' + (m === it.rec ? ' selected' : '') + '>' + esc(m.key + ' · ' + m.name + ' · ост. ' + fmtQ(m.tot) + (m.tgt !== null ? ' · цел. ' + fmtQ(m.tgt) : '')) + '</option>'; }).join('') + '</select>' : esc(it.name);
       return '<tr class="r-' + it.cls + (it.isGroup ? ' grow' : '') + (inc ? ' incart' : '') + '" data-key="' + esc(it.key) + '" data-k="' + esc(k) + '"' + (it.isGroup ? ' data-grp="' + esc(it.grp) + '"' : '') + '><td class="ctr"><input type="checkbox" data-chk="' + esc(it.key) + '"' + (S.oChecked[it.key] ? ' checked' : '') + '></td><td class="' + it.cls + '">' + esc(it.stat) + '</td><td class="k clickable" data-open="' + esc(it.isGroup ? '' : it.key) + '" title="' + esc(it.key) + '">' + (it.isGroup ? '▣ ' + esc(it.grp) : esc(it.key)) + '</td><td class="k">' + esc(it.isGroup ? '' : it.art) + '</td><td class="name">' + nameCell + '</td><td>' + esc(it.brand) + '</td><td>' + esc(it.type) + '</td>' +
-        '<td class="num"><b>' + fmtQ(it.tot) + '</b></td><td class="num">' + (it.min === null ? '' : fmtQ(it.min)) + '</td><td class="num">' + (it.crit === null || it.crit === undefined ? '' : fmtQ(it.crit)) + '</td><td class="num">' + (it.tgt === null ? '' : fmtQ(it.tgt)) + '</td><td class="num">' + fmtQ(it.def) + '</td><td class="num"><b>' + fmtQ(it.order) + '</b></td><td class="num">' + fmtM(it.price) + '</td><td class="num">' + fmtM(it.order * it.price) + '</td>' +
+        '<td class="num"><b>' + fmtQ(it.tot) + '</b></td><td class="num">' + (it.min === null ? '' : fmtQ(it.min)) + '</td><td class="num">' + (it.crit === null || it.crit === undefined ? '' : fmtQ(it.crit)) + '</td><td class="num">' + (it.tgt === null ? '' : fmtQ(it.tgt)) + '</td><td class="num">' + fmtQ(it.def) + '</td><td class="num"><b>' + fmtQ(it.order) + '</b></td><td style="white-space:nowrap">' + (it.isGroup ? '' : advOrderCell(it.key)) + '</td><td class="num">' + fmtM(it.price) + '</td><td class="num">' + fmtM(it.order * it.price) + '</td>' +
         '<td>' + esc(fmtDate(it.nw)) + '</td><td>' + (sp ? esc(sp.sup || '—') + ' <span class="hint">' + esc(fmtDate(sp.d)) + ' · ' + fmtQ(sp.qty) + ' по ' + fmtM(sp.price) + '</span>' : (S.arr ? '—' : '…')) + '</td><td>' + (it.grp ? esc(it.grp) + ' · ' + fmtQ(it.grpTot) + (S.grpInfo[it.grp] && S.grpInfo[it.grp].thr !== null ? ' / порог ' + fmtQ(S.grpInfo[it.grp].thr) : '') : '') + '</td>' +
         '<td>' + (oi ? '<span class="ordstat s2" title="' + esc(oi.ids.join(', ')) + '">в заказе: ' + fmtQ(oi.qty) + ' (' + esc(oi.ids.join(', ')) + ')</span>' : '') + '</td><td>' + esc(it.comment) + '</td>' +
         '<td class="ctr" style="white-space:nowrap">' + (inc ? '<button class="secondary" data-rm="' + esc(k) + '" title="Убрать из корзины">✓ в корзине</button>' : '<button class="primary" data-add="' + esc(it.key) + '" title="Добавить в корзину" style="padding:3px 9px">＋</button>') + (S.role === 'wizard' && !it.isGroup ? ' <button class="secondary" data-excl="' + esc(it.key) + '" title="Исключить из контроля (снято с производства / нерелевантно)" style="padding:3px 7px">⊘</button>' : '') + '</td></tr>';
-    }).join('') || '<tr><td colspan="21" class="hint" style="padding:14px">Кандидатов нет — по выбранным фильтрам всё в норме.</td></tr>';
+    }).join('') || '<tr><td colspan="22" class="hint" style="padding:14px">Кандидатов нет — по выбранным фильтрам всё в норме.</td></tr>';
     renderCart();
   }
   function rowByKey(key) { return (S.lastOrder || []).filter(function (r) { return r.key === key; })[0]; }
@@ -2156,6 +2254,221 @@
   }
   $('alertBtn').addEventListener('click', function () { if ((S.alertFresh || []).length && $('alertBox').style.display === 'none') { showAlertBox(S.alertFresh); return; } $('cStat').value = 'red'; showView('crit'); markSeen((S.alertReds || []).map(function (it) { return it.key; })); checkAlerts(); });
   soundBtn();
+
+  // ═════════════════════════════ v2.0: СОВЕТНИК — расход, точка заказа, ABC/XYZ, в пути, резерв, наборы, залежалый запас
+  S.adv = null; S.advLoading = false; S.advKeys = null; S.advChecked = {}; S.advSig = '';
+  var ADV_LEVEL = { red: '🔴', yel: '🟡', info: '💡' }, ADV_FLAG = { order: 'Заказать', soon: 'Скоро точка заказа', nomin: 'Нет минимума', min_low: 'Минимум занижен', min_high: 'Минимум завышен', dead: 'Залежалый', transit: 'В пути', reserve: 'Резерв Б24' };
+  function advByKey(k) { return S.adv && S.adv.byKey ? S.adv.byKey[k] : null; }
+  function advFlags(o) {
+    var f = [];
+    if (o.days !== null && o.days <= o.lead && o.recQty > 0) f.push('order'); else if (o.days !== null && o.days <= o.lead + 14) f.push('soon');
+    if (o.rate && o.min === null) f.push('nomin'); else if (o.rate && o.autoMin && o.min !== null && o.min > 0 && o.autoMin >= o.min * 2) f.push('min_low'); else if (o.rate && o.autoMin && o.min !== null && o.min >= o.autoMin * 2.5) f.push('min_high');
+    if (o.dead) f.push('dead'); if (o.transit > 0) f.push('transit'); if (o.reserve > 0) f.push('reserve');
+    return f;
+  }
+  /** Загрузка рекомендаций с сервера; quiet — только обновить значок в шапке и подсказку. */
+  function advLoad(quiet, force) {
+    if (!S.boot || S.offline) return Promise.resolve(null);
+    if (S.adv && !force) { if (!quiet) renderAdvisor(); return Promise.resolve(S.adv); }
+    if (S.advLoading) { if (!quiet) $('advAlerts').innerHTML = '<p class="hint">Считаю рекомендации…</p>'; return Promise.resolve(null); }
+    S.advLoading = true;
+    if (!quiet) $('advAlerts').innerHTML = '<p class="hint">Считаю расход по снимкам остатков, заказы в пути, резерв сделок… (обычно 3–10 секунд)</p>';
+    return (quiet ? callQuiet : call)('kzwAdvisor', S.token).then(function (r) {
+      var cols = r.cols, byKey = {};
+      r.rows = r.items.map(function (arr) { var o = {}; cols.forEach(function (c, i) { o[c] = arr[i]; }); o.flags = advFlags(o); byKey[o.key] = o; return o; });
+      r.byKey = byKey; delete r.items; S.adv = r; S.advLoading = false;
+      advBadge(); if (!quiet) renderAdvisor(); else { if (currentView() === 'advisor') renderAdvisor(); if (currentView() === 'dash') renderDash(); }
+      advNotify();
+      return r;
+    }).catch(function (e) { S.advLoading = false; if (!quiet) { $('advAlerts').innerHTML = '<p class="msg err" style="display:block">' + esc(e.message) + '</p>'; } return null; });
+  }
+  function advBadge() {
+    var btn = $('advBtn'); if (!S.adv) { btn.style.display = 'none'; return; }
+    var red = S.adv.alerts.filter(function (a) { return a.level === 'red'; }).length, yel = S.adv.alerts.filter(function (a) { return a.level === 'yel'; }).length, n = S.adv.alerts.length;
+    btn.style.display = ''; btn.textContent = '💡 ' + n; btn.classList.toggle('pulse', red > 0); btn.classList.toggle('adv-red', red > 0); btn.classList.toggle('adv-yel', !red && yel > 0);
+    btn.title = n ? 'Советник: рекомендаций ' + n + (red ? ', срочных ' + red : '') + ' — открыть' : 'Советник: срочных рекомендаций нет';
+  }
+  /** Подсказка-уведомление: новые срочные (красные/жёлтые) рекомендации — один раз на набор, пока не нажали «Понятно». */
+  function advNotify() {
+    if (!S.adv) return; var urgent = S.adv.alerts.filter(function (a) { return a.level !== 'info'; }); if (!urgent.length) { $('advBox').style.display = 'none'; return; }
+    var sig = urgent.map(function (a) { return a.id + ':' + a.n; }).join('|'), seen = ''; try { seen = localStorage.getItem('kzw_advseen') || ''; } catch (e) {}
+    if (sig === seen || sig === S.advSig || currentView() === 'advisor') return; S.advSig = sig;
+    var box = $('advBox');
+    box.innerHTML = '<h3>💡 Советник: на что обратить внимание</h3><ul>' + urgent.slice(0, 6).map(function (a) { return '<li>' + ADV_LEVEL[a.level] + ' <a href="#" data-adv="' + esc(a.id) + '">' + esc(a.title) + '</a></li>'; }).join('') + (urgent.length > 6 ? '<li class="hint">… и ещё ' + (urgent.length - 6) + '</li>' : '') + '</ul>' +
+      '<div class="actions"><button class="primary" data-a="open">Открыть Советник</button><button class="secondary" data-a="ok">Понятно</button><button class="secondary" data-a="close" title="Скрыть до следующей загрузки">✕</button></div>';
+    box.style.top = $('alertBox').style.display !== 'none' ? ($('alertBox').offsetHeight + 72) + 'px' : ''; box.style.display = '';
+    box.onclick = function (e) {
+      var a = e.target.closest('a[data-adv]'); if (a) { e.preventDefault(); box.style.display = 'none'; advOpen(a.dataset.adv); return; }
+      var b = e.target.closest('button[data-a]'); if (!b) return; box.style.display = 'none';
+      if (b.dataset.a === 'open') advOpen(); if (b.dataset.a === 'ok' || b.dataset.a === 'open') { try { localStorage.setItem('kzw_advseen', sig); } catch (e2) {} }
+    };
+  }
+  function advOpen(alertId) { showView('advisor'); if (alertId) setTimeout(function () { var el = document.querySelector('.adv-alert[data-id="' + alertId + '"]'); if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('flash'); setTimeout(function () { el.classList.remove('flash'); }, 1600); } }, 80); }
+  $('advBtn').addEventListener('click', function () { advOpen(); });
+  // ── вкладка
+  function renderAdvisor() {
+    if (!S.boot) return;
+    var wiz = S.role === 'wizard'; $('advSettingsBtn').style.display = wiz ? '' : 'none'; if (!wiz) $('advSettings').style.display = 'none';
+    if (!S.adv) { if (S.offline) { $('advAlerts').innerHTML = '<p class="hint">Нет связи — Советник недоступен офлайн.</p>'; return; } advLoad(false); return; }
+    var A = S.adv, B = A.basis, R = A.rows, st = A.settings;
+    $('advInfo').textContent = 'Расчёт ' + fmtDate(A.at) + ' · снимков остатков: ' + B.loads + ' за ' + B.days + ' дн.' + (B.from ? ' (' + fmtDate(B.from) + ' — ' + fmtDate(B.to) + ')' : '') + ' · срок поставки по умолчанию ' + st.leadDefault + ' дн. · страховой запас ' + st.safetyPct + ' %';
+    var live = R.filter(function (o) { return !o.excl; }), red = A.alerts.filter(function (a) { return a.level === 'red'; }).length, yel = A.alerts.filter(function (a) { return a.level === 'yel'; }).length;
+    var toOrder = live.filter(function (o) { return o.flags.indexOf('order') !== -1; }), soon = live.filter(function (o) { return o.flags.indexOf('soon') !== -1; }), dead = live.filter(function (o) { return o.dead; }), nomin = live.filter(function (o) { return o.flags.indexOf('nomin') !== -1; }), transit = live.filter(function (o) { return o.transit > 0; }), resv = live.filter(function (o) { return o.reserve > 0; });
+    $('advKpis').innerHTML = kpi(fmtN(A.alerts.length), 'Рекомендаций' + (red ? ' · срочных ' + red : ''), red ? 'red' : (yel ? 'yel' : 'grn')) + kpi(fmtN(toOrder.length), 'Заказать сейчас: хватит меньше срока поставки (все классы)', toOrder.length ? 'red link' : 'grey link', 'order') + kpi(fmtN(soon.length), 'Точка заказа близко', soon.length ? 'yel link' : 'grey link', 'soon') + kpi(fmtN(sum(toOrder.concat(soon), function (o) { return o.recQty * o.price; })), 'Сумма рекомендуемого заказа, BYN', 'money') +
+      kpi(fmtN(live.filter(function (o) { return o.rate; }).length), 'Позиций с измеренным расходом из ' + live.length, B.ok ? 'grn' : 'grey') + kpi(fmtN(live.filter(function (o) { return o.abc === 'A'; }).length) + ' / ' + fmtN(live.filter(function (o) { return o.abc === 'B'; }).length), 'Класс A / B (' + st.abcA + ' % / ' + st.abcB + ' % стоимости или расхода)', 'link', 'ab') + kpi(fmtN(nomin.length), 'Расход есть, минимума нет', nomin.length ? 'yel link' : 'grey link', 'nomin') +
+      kpi(fmtN(transit.length), 'Позиций в пути (заказы согласован / отправлен)', transit.length ? 'grn link' : 'grey link', 'transit') + kpi(fmtN(resv.length), 'Под открытые сделки Битрикс24' + (A.reserveAt ? ' · ' + fmtDate(A.reserveAt) : ''), resv.length ? 'yel link' : 'grey link', 'reserve') + kpi(fmtN(sum(dead, 'value')), 'Залежалый запас (без движения ' + st.deadDays + ' дн.), BYN', dead.length ? 'exc link' : 'grey link', 'dead');
+    $('advKpis').querySelectorAll('.kpi.link').forEach(function (k) { k.onclick = function () { var v = k.dataset.k; S.advKeys = null; $('advFlag').value = v === 'ab' ? '' : v; $('advCls').value = v === 'ab' ? 'AB' : ''; renderAdvTable(); $('advTablePanel').scrollIntoView({ behavior: 'smooth' }); }; });
+    $('advBasis').innerHTML = B.ok ? '' : '<div class="msg info" style="display:block">Расход пока не измерен: нужно минимум 2 снимка остатков за ' + st.minDays + ' дней (снимок пишется при каждой загрузке 1С на лист «Снимки остатков»; сейчас ' + B.loads + ' за ' + B.days + ' дн.). До этого Советник работает по светофору и заданным минимумам; расчётные минимумы и «хватит дней» появятся после накопления истории — загружайте выгрузку 1С регулярно, лучше ежедневно.</div>';
+    $('advAlerts').innerHTML = A.alerts.length ? A.alerts.map(function (a) {
+      var keys = a.keys || [], chips = keys.slice(0, 8).map(function (k) { var it = S.byKey[k]; return '<a href="#" class="adv-chip" data-open="' + esc(k) + '" title="' + esc(it ? it.name : k) + '">' + esc(k) + '</a>'; }).join('') + (keys.length > 8 ? '<span class="hint"> … ещё ' + (keys.length - 8) + '</span>' : '');
+      var btns = '';
+      if (keys.length) btns += '<button class="secondary" data-a="show" data-id="' + esc(a.id) + '">Показать в таблице</button>';
+      if (a.action === 'order') btns += '<button class="primary" data-a="cart" data-id="' + esc(a.id) + '">🛒 В корзину заказа</button>';
+      if (a.action === 'automin' && wiz) btns += '<button class="primary" data-a="automin" data-id="' + esc(a.id) + '">Принять расчётные минимумы</button>';
+      if (a.action === 'orders') btns += '<button class="secondary" data-a="orders">Открыть заказы</button>';
+      if (a.action === 'dead' && wiz) btns += '<button class="secondary" data-a="excl" data-id="' + esc(a.id) + '">⊘ Исключить из контроля…</button>';
+      if (a.action === 'excl') btns += '<button class="secondary" data-a="exclTab">Открыть «Исключения»</button>';
+      if (a.id === 'sets') btns += '<button class="secondary" data-a="sets">Наборы ТО</button>';
+      return '<div class="adv-alert ' + a.level + '" data-id="' + esc(a.id) + '"><div class="t">' + ADV_LEVEL[a.level] + ' ' + esc(a.title) + '</div><div class="x">' + esc(a.text) + '</div>' + (chips ? '<div class="chips">' + chips + '</div>' : '') + (btns ? '<div class="actions">' + btns + '</div>' : '') + '</div>';
+    }).join('') : '<p class="msg ok" style="display:block">Срочных рекомендаций нет: запас по измеренному расходу достаточен, минимумы согласуются с расчётом, заказы в срок.</p>';
+    renderAdvSets(); renderAdvTable(); if (wiz) renderAdvSettings();
+    var sig = A.alerts.filter(function (a) { return a.level !== 'info'; }).map(function (a) { return a.id + ':' + a.n; }).join('|'); try { localStorage.setItem('kzw_advseen', sig); } catch (e) {} $('advBox').style.display = 'none';
+  }
+  function advAlert(id) { return (S.adv ? S.adv.alerts : []).filter(function (a) { return a.id === id; })[0]; }
+  $('advAlerts').addEventListener('click', function (e) {
+    var op = e.target.closest('a[data-open]'); if (op) { e.preventDefault(); openItem(op.dataset.open); return; }
+    var b = e.target.closest('button[data-a]'); if (!b) return; var a = b.dataset.id ? advAlert(b.dataset.id) : null, keys = a ? a.keys : [];
+    switch (b.dataset.a) {
+      case 'show': S.advKeys = keys; $('advFlag').value = ''; $('advCls').value = ''; $('advSearch').value = ''; renderAdvTable(); $('advTablePanel').scrollIntoView({ behavior: 'smooth' }); break;
+      case 'cart': advToCart(keys); break;
+      case 'automin': advApplyMin(keys); break;
+      case 'orders': showView('order'); setTimeout(function () { $('oSaved').scrollIntoView({ behavior: 'smooth' }); }, 60); break;
+      case 'excl': excludeKeys(keys.filter(function (k) { return S.byKey[k] && !S.byKey[k].excl; }), 'залежалый запас'); break;
+      case 'exclTab': showView('excl'); break;
+      case 'sets': $('advSetsPanel').scrollIntoView({ behavior: 'smooth' }); break;
+    }
+  });
+  /** В корзину заказа: количество — рекомендуемое Советником (иначе — до целевого / минимума). */
+  function advToCart(keys) {
+    var n = 0; keys.forEach(function (k) { var it = S.byKey[k], o = advByKey(k); if (!it || it.cls === 'exc') return; var qty = o && o.recQty > 0 ? o.recQty : (it.order > 0 ? it.order : Math.max(1, it.min || 1));
+      S.cart.lines[k] = { key: k, art: it.art, name: it.name, brand: it.brand, type: it.type, unit: it.unit, qty: qty, price: it.price, grp: it.grp || '', stock: it.tot, min: it.min, note: (S.cart.lines[k] && S.cart.lines[k].note) || (o && o.days !== null ? 'Советник: хватит на ' + o.days + ' дн., срок поставки ' + o.lead + ' дн.' + (o.transit ? ', в пути ' + fmtQ(o.transit) : '') + (o.reserve ? ', резерв Б24 ' + fmtQ(o.reserve) : '') : ''), sup: (typeof lastSup === 'function' && lastSup(k) || {}).sup || '' }; n++; });
+    saveCart(); S.advChecked = {};
+    if (!n) { alert('Нечего добавить: позиции исключены или не найдены'); return; }
+    msg($('advMsg'), 'В корзину заказа добавлено позиций: ' + n + ' — откройте «🛒 Заказ», проверьте количества и сохраните', 'ok'); renderAdvTable();
+  }
+  function advApplyMin(keys) {
+    if (S.role !== 'wizard') { alert('Менять минимумы может WIZARD'); return; }
+    var pairs = keys.map(function (k) { var o = advByKey(k); return o && o.autoMin > 0 ? [k, o.autoMin] : null; }).filter(Boolean);
+    if (!pairs.length) { alert('Для выбранных позиций нет расчётного минимума (не измерен расход)'); return; }
+    var ex = pairs.slice(0, 4).map(function (p) { var it = S.byKey[p[0]]; return p[0] + ': ' + (it && it.min !== null ? fmtQ(it.min) + ' → ' : '') + fmtQ(p[1]); }).join('\n');
+    if (!confirm('Записать расчётные минимумы в «Справочник» (столбец G) для ' + pairs.length + ' поз.?\n\n' + ex + (pairs.length > 4 ? '\n…' : '') + '\n\nРасчёт: расход в день × срок поставки × (1 + страховой запас %), с учётом сезона.')) return;
+    msg($('advMsg'), 'Записываю минимумы…', 'info');
+    call('kzwSetMinMany', S.token, pairs).then(function (r) { msg($('advMsg'), 'Записано минимумов: ' + r.changed + '. Перечитываю данные…', 'ok'); S.advChecked = {}; return refresh(true); }).then(function () { S.adv = null; advLoad(false); }).catch(function (e) { msg($('advMsg'), e.message, 'err'); });
+  }
+  // ── таблица позиций
+  function advRows() {
+    var q = $('advSearch').value.trim().toLowerCase(), br = $('advBrand').value, tp = $('advType').value, cls = $('advCls').value, fl = $('advFlag').value, keys = S.advKeys;
+    var rows = S.adv.rows.filter(function (o) {
+      if (keys && keys.indexOf(o.key) === -1) return false; if (o.excl && fl !== 'excl') return false; if (br && o.brand !== br) return false; if (tp && o.type !== tp) return false;
+      if (cls && cls.indexOf(o.abc) === -1) return false;
+      if (fl === 'excl') return !!o.excl; if (fl === 'rate') return !!o.rate; if (fl && o.flags.indexOf(fl) === -1) return false;
+      if (q) { var it = S.byKey[o.key]; if (!(it ? it.search : (o.key + ' ' + o.name + ' ' + o.brand).toLowerCase()).replace(/\s+/g, ' ').match(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))) return false; }
+      return true;
+    });
+    var sk = S.advSort || 'days', dir = S.advDir || 1;
+    rows.sort(function (a, b) { var x = a[sk], y = b[sk]; if (x === null || x === undefined) x = sk === 'days' ? 1e9 : -1e9; if (y === null || y === undefined) y = sk === 'days' ? 1e9 : -1e9; if (typeof x === 'string') return x.localeCompare(y, 'ru') * dir; return (x - y) * dir; });
+    return rows;
+  }
+  var ADV_COLS = [['', ''], ['key', 'Ключ'], ['name', 'Наименование'], ['brand', 'Бренд'], ['abc', 'ABC'], ['xyz', 'XYZ'], ['tot', 'Остаток'], ['transit', 'В пути'], ['reserve', 'Резерв Б24'], ['avail', 'Доступно'], ['rate', 'Расход / мес.'], ['days', 'Хватит, дн.'], ['lead', 'Срок поставки, дн.'], ['rop', 'Точка заказа'], ['min', 'Мин. задан'], ['autoMin', 'Мин. расчётный'], ['recQty', 'Рекоменд. кол-во'], ['sumRec', 'Сумма, BYN'], ['deadDays', 'Без движения, дн.'], ['flags', 'Советник']];
+  function renderAdvTable() {
+    if (!S.adv) return; var rows = advRows(); S.advLast = rows;
+    $('advCount').textContent = 'Строк: ' + rows.length + (S.advKeys ? ' · показаны позиции рекомендации' : '');
+    $('advKeysOff').style.display = S.advKeys ? '' : 'none';
+    var sk = S.advSort || 'days';
+    $('advTable').querySelector('thead').innerHTML = '<tr>' + ADV_COLS.map(function (c) { return '<th class="nosort' + (c[0] === sk ? ' sorted' : '') + '" data-s="' + c[0] + '" style="cursor:pointer">' + esc(c[1]) + (c[0] === sk ? (S.advDir === -1 ? ' ▼' : ' ▲') : '') + '</th>'; }).join('') + '</tr>';
+    $('advTable').querySelector('tbody').innerHTML = rows.slice(0, 1500).map(function (o) {
+      var it = S.byKey[o.key] || {}, inc = !!S.cart.lines[o.key], cls = o.excl ? 'exc' : (it.cls || 'none');
+      return '<tr class="r-' + cls + (inc ? ' incart' : '') + '" data-key="' + esc(o.key) + '"><td class="ctr"><input type="checkbox" data-chk="' + esc(o.key) + '"' + (S.advChecked[o.key] ? ' checked' : '') + '></td><td class="k clickable" data-open="' + esc(o.key) + '">' + esc(o.key) + '</td><td class="name">' + esc(o.name) + '</td><td>' + esc(o.brand) + '</td><td class="ctr"><span class="abc ' + o.abc + '">' + o.abc + '</span></td><td class="ctr">' + (o.xyz || '—') + '</td>' +
+        '<td class="num"><b>' + fmtQ(o.tot) + '</b></td><td class="num">' + (o.transit ? fmtQ(o.transit) : '') + '</td><td class="num">' + (o.reserve ? fmtQ(o.reserve) : '') + '</td><td class="num">' + fmtQ(o.avail) + '</td><td class="num">' + (o.rate ? fmtQ(Math.round(o.rate * 30 * 100) / 100) : '<span class="hint">—</span>') + '</td><td class="num">' + (o.days === null ? '<span class="hint">—</span>' : '<b class="' + (o.days <= o.lead ? 'red' : (o.days <= o.lead + 14 ? 'yel' : '')) + '">' + o.days + '</b>') + '</td><td class="num">' + o.lead + '</td><td class="num">' + (o.rop ? fmtQ(o.rop) : '') + '</td><td class="num">' + (o.min === null ? '' : fmtQ(o.min)) + '</td><td class="num">' + (o.autoMin ? fmtQ(o.autoMin) : '') + '</td><td class="num"><b>' + (o.recQty ? fmtQ(o.recQty) : '') + '</b></td><td class="num">' + (o.recQty ? fmtM(o.recQty * o.price) : '') + '</td><td class="num">' + (o.deadDays === null ? '' : o.deadDays) + '</td>' +
+        '<td>' + o.flags.map(function (f) { return '<span class="adv-flag ' + f + '">' + ADV_FLAG[f] + '</span>'; }).join(' ') + '</td></tr>';
+    }).join('') || '<tr><td colspan="' + ADV_COLS.length + '" class="hint" style="padding:14px">Ничего не найдено по выбранным фильтрам.</td></tr>';
+  }
+  $('advTable').addEventListener('click', function (e) {
+    if (e.target.closest('input[type=checkbox]')) return;
+    var op = e.target.closest('[data-open]'); if (op) { openItem(op.dataset.open); return; }
+    var tr = e.target.closest('tr[data-key]'); if (tr) openItem(tr.dataset.key);
+  });
+  $('advTable').addEventListener('change', function (e) { var c = e.target.closest('input[data-chk]'); if (c) S.advChecked[c.dataset.chk] = c.checked; });
+  $('advTable').querySelector('thead').addEventListener('click', function (e) {
+    var th = e.target.closest('th'); if (!th) return;
+    if (th.cellIndex === 0) { var all = !(S.advLast || []).every(function (r) { return S.advChecked[r.key]; }); (S.advLast || []).forEach(function (r) { S.advChecked[r.key] = all; }); renderAdvTable(); return; }
+    var s = th.dataset.s; if (!s || s === 'flags' || s === 'sumRec') return; if (S.advSort === s) S.advDir = -(S.advDir || 1); else { S.advSort = s; S.advDir = (s === 'days' || s === 'key' || s === 'name' || s === 'brand' || s === 'abc' || s === 'xyz') ? 1 : -1; } renderAdvTable();
+  });
+  ['advBrand', 'advType', 'advCls', 'advFlag'].forEach(function (id) { $(id).addEventListener('change', renderAdvTable); }); $('advSearch').addEventListener('input', renderAdvTable);
+  $('advKeysOff').addEventListener('click', function () { S.advKeys = null; renderAdvTable(); });
+  function advChecked() { return (S.advLast || []).filter(function (r) { return S.advChecked[r.key]; }).map(function (r) { return r.key; }); }
+  $('advCart').addEventListener('click', function () { var k = advChecked(); if (!k.length) { alert('Отметьте строки галочками (клик по первой ячейке шапки — отметить все)'); return; } advToCart(k); });
+  $('advMin').addEventListener('click', function () { var k = advChecked(); if (!k.length) { alert('Отметьте строки галочками'); return; } advApplyMin(k); });
+  $('advCsv').addEventListener('click', function () {
+    var rows = [ADV_COLS.slice(1).map(function (c) { return c[1]; })];
+    (S.advLast || []).forEach(function (o) { rows.push([o.key, o.name, o.brand, o.abc, o.xyz || '', o.tot, o.transit, o.reserve, o.avail, o.rate ? Math.round(o.rate * 30 * 100) / 100 : '', o.days === null ? '' : o.days, o.lead, o.rop || '', o.min === null ? '' : o.min, o.autoMin || '', o.recQty || '', o.recQty ? Math.round(o.recQty * o.price * 100) / 100 : '', o.deadDays === null ? '' : o.deadDays, o.flags.map(function (f) { return ADV_FLAG[f]; }).join('; ')]); });
+    csv(rows, 'Советник_' + S.boot.today + '.csv');
+  });
+  $('advRefresh').addEventListener('click', function () { S.adv = null; advLoad(false, true); });
+  // ── наборы ТО
+  function renderAdvSets() {
+    var sets = S.adv.sets || [], wiz = S.role === 'wizard';
+    $('advSets').innerHTML = (sets.length ? '<div class="tablewrap" style="max-height:300px"><table class="grid rep"><thead><tr><th class="nosort">Набор</th><th class="nosort">Можно собрать, шт.</th><th class="nosort">Состав (ключ × кол-во · доступно)</th><th class="nosort">Не хватает</th></tr></thead><tbody>' +
+      sets.map(function (s) { return '<tr class="' + (s.missing.length ? 'r-red' : 'r-grn') + '"><td><b>' + esc(s.name) + '</b></td><td class="num"><b>' + s.kits + '</b></td><td>' + s.parts.map(function (p) { return (p.key ? '<a href="#" class="adv-chip' + (p.ok ? '' : ' bad') + '" data-open="' + esc(p.key) + '">' + esc(p.ref) + '</a>' : '<span class="adv-chip bad" title="не найдено в Остатках">' + esc(p.ref) + '</span>') + ' × ' + fmtQ(p.qty) + (p.avail !== null ? ' <span class="hint">· ' + fmtQ(p.avail) + '</span>' : ''); }).join(', ') + '</td><td>' + (s.missing.length ? s.missing.map(function (p) { return esc(p.ref); }).join(', ') : '✓') + '</td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="hint">Наборов пока нет. Набор ТО — перечень позиций, которые должны быть на складе одновременно (фильтры + масло + ремень для ТО-500): Советник следит, чтобы комплект можно было собрать целиком.</p>') +
+      (wiz ? '<details style="margin-top:8px"><summary class="hint">✎ Загрузить наборы списком (WIZARD)</summary><p class="hint">Строки «Набор; ключ или артикул; количество» (разделитель — точка с запятой, табуляция или запятая). Например:<br><code>ТО-500 GA30; 1613610500; 1<br>ТО-500 GA30; 1622365600; 1<br>ТО-500 GA30; 2901052200; 2</code></p><textarea id="advSetsText" rows="5" style="width:100%;font-family:monospace;font-size:12px" placeholder="Набор; ключ; кол-во"></textarea><div class="actions"><select id="advSetsMode"><option value="append">Добавить к существующим</option><option value="replace">Заменить все наборы</option></select><button class="primary" id="advSetsSave">Записать на лист «Наборы»</button></div></details>' : '');
+    var sv = $('advSetsSave'); if (sv) sv.onclick = function () { var txt = $('advSetsText').value.trim(); if (!txt) { alert('Вставьте строки наборов'); return; } sv.disabled = true; call('kzwUploadSets', S.token, txt, $('advSetsMode').value).then(function (r) { msg($('advMsg'), 'Наборы записаны: строк ' + r.rows + ', наборов ' + r.sets + '. Пересчитываю…', 'ok'); S.adv = null; advLoad(false, true); }).catch(function (e) { alert(e.message); sv.disabled = false; }); };
+  }
+  $('advSets').addEventListener('click', function (e) { var op = e.target.closest('a[data-open]'); if (op) { e.preventDefault(); openItem(op.dataset.open); } });
+  // ── параметры (WIZARD)
+  var ADV_MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  function renderAdvSettings() {
+    var st = S.adv.settings, b = $('advSettings'); if (b.dataset.done === S.adv.at) return; b.dataset.done = S.adv.at;
+    var num1 = function (id, label, val, hint) { return '<div class="field wiz"><label title="' + esc(hint || '') + '">' + label + '</label><input type="text" id="' + id + '" value="' + esc(val) + '"></div>'; };
+    b.querySelector('.fields').innerHTML = num1('advLeadDefault', 'Срок поставки по умолчанию, дн.', st.leadDefault, 'От заказа до прихода на склад, если для бренда не задано отдельно') + num1('advSafety', 'Страховой запас, %', st.safetyPct, 'Надбавка к минимуму на колебания спроса и задержки') + num1('advCycl', 'Период между заказами, дн.', st.cyclDays, 'Рекомендуемое количество закрывает срок поставки + этот период') +
+      num1('advAbcA', 'Класс A — до, % накопленной стоимости расхода', st.abcA) + num1('advAbcB', 'Класс B — до, %', st.abcB) + num1('advXyzX', 'X — коэффициент вариации до', st.xyzX, 'Стабильный расход') + num1('advXyzY', 'Y — до', st.xyzY, 'Колеблющийся; выше — Z, непредсказуемый') + num1('advDead', 'Залежалый запас — без движения дольше, дн.', st.deadDays) + num1('advMinDays', 'Минимум истории для расчёта, дн.', st.minDays) +
+      '<div class="field wiz"><label title="Классы, по которым Советник поднимает срочные рекомендации">Срочные рекомендации для классов</label><select id="advClasses"><option value="A"' + (st.alertClasses === 'A' ? ' selected' : '') + '>только A</option><option value="AB"' + (st.alertClasses === 'AB' ? ' selected' : '') + '>A и B</option><option value="ABC"' + (st.alertClasses === 'ABC' ? ' selected' : '') + '>все</option></select></div>' +
+      '<div class="field wiz"><label>Резерв под сделки Битрикс24</label><select id="advReserveOn"><option value="1"' + (st.reserveOn ? ' selected' : '') + '>учитывать</option><option value="0"' + (!st.reserveOn ? ' selected' : '') + '>не учитывать</option></select></div>' +
+      '<div class="field wiz" style="grid-column:1/-1"><label>Срок поставки по брендам, дн. — «Бренд = дни», по одному в строке</label><textarea id="advLeads" rows="4" style="width:100%;font-family:monospace;font-size:12px" placeholder="Atlas Copco = 45\nStribo = 14">' + esc(Object.keys(st.lead || {}).map(function (k) { return k + ' = ' + st.lead[k]; }).join('\n')) + '</textarea><datalist id="dlBrands">' + S.brands.map(function (x) { return '<option value="' + esc(x) + '">'; }).join('') + '</datalist></div>';
+    $('advSeason').innerHTML = '<div class="tablewrap"><table class="grid rep"><thead><tr><th class="nosort">Тип</th>' + ADV_MONTHS.map(function (m) { return '<th class="nosort">' + m + '</th>'; }).join('') + '</tr></thead><tbody>' + S.types.map(function (t) { var arr = (st.season && st.season[t]) || []; return '<tr><td>' + esc(t) + '</td>' + ADV_MONTHS.map(function (m, i) { return '<td class="num"><input type="text" data-season="' + esc(t) + '" data-m="' + i + '" value="' + esc(arr[i] === undefined || arr[i] === null ? '' : arr[i]) + '" style="width:44px;text-align:center;padding:2px" placeholder="1"></td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+    $('advDigestOn').checked = !!S.adv.digestOn; $('advReserveInfo').textContent = S.adv.reserveOn ? (S.adv.reserveAt ? 'Резерв обновлён ' + fmtDate(S.adv.reserveAt) + ' (обновляется автоматически при каждой загрузке 1С)' : 'Резерв ещё не считался — нажмите «Обновить резерв»') : 'Битрикс24 не подключён (вкладка «Пароль» → Битрикс24) — резерв и сводка недоступны';
+    ['advReserveBtn', 'advDigestNow', 'advDigestOn'].forEach(function (id) { $(id).disabled = !S.adv.reserveOn; });
+  }
+  $('advSettingsBtn').addEventListener('click', function () { var p = $('advSettings'); p.style.display = p.style.display === 'none' ? '' : 'none'; if (p.style.display !== 'none') p.scrollIntoView({ behavior: 'smooth' }); });
+  $('advSave').addEventListener('click', function () {
+    var n = function (id, def) { var v = parseFloat(String($(id).value).replace(',', '.')); return isNaN(v) ? def : v; };
+    var a = { leadDefault: n('advLeadDefault', 30), safetyPct: n('advSafety', 30), cyclDays: n('advCycl', 30), abcA: n('advAbcA', 80), abcB: n('advAbcB', 95), xyzX: n('advXyzX', 0.5), xyzY: n('advXyzY', 1), deadDays: n('advDead', 365), minDays: n('advMinDays', 14), alertClasses: $('advClasses').value, reserveOn: $('advReserveOn').value === '1', lead: {}, season: {} };
+    $('advLeads').value.split('\n').forEach(function (l) { var m = l.match(/^\s*(.+?)\s*[=;:\t]\s*(\d+(?:[.,]\d+)?)\s*$/); if (m) a.lead[m[1]] = parseFloat(m[2].replace(',', '.')); });
+    $('advSeason').querySelectorAll('input[data-season]').forEach(function (inp) { var v = parseFloat(String(inp.value).replace(',', '.')); if (!isNaN(v) && v > 0 && v !== 1) { (a.season[inp.dataset.season] = a.season[inp.dataset.season] || [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])[+inp.dataset.m] = v; } });
+    var st = S.boot.webSettings || {}; st.advisor = a;
+    msg($('advSetMsg'), 'Сохраняю…', 'info');
+    call('kzwSaveSettings', S.token, st).then(function (r) { S.boot.webSettings = r.settings; msg($('advSetMsg'), 'Параметры сохранены — пересчитываю рекомендации…', 'ok'); S.adv = null; $('advSettings').dataset.done = ''; advLoad(false, true); }).catch(function (e) { msg($('advSetMsg'), e.message, 'err'); });
+  });
+  $('advReserveBtn').addEventListener('click', function () { var b = $('advReserveBtn'); b.disabled = true; msg($('advSetMsg'), 'Читаю открытые сделки Битрикс24…', 'info'); call('kzwReserveRefresh', S.token).then(function (r) { msg($('advSetMsg'), 'Резерв обновлён: сделок ' + r.deals + ', позиций с резервом ' + r.n + '. Пересчитываю…', 'ok'); S.adv = null; $('advSettings').dataset.done = ''; advLoad(false, true); }).catch(function (e) { msg($('advSetMsg'), e.message, 'err'); }).then(function () { b.disabled = false; }); });
+  $('advDigestOn').addEventListener('change', function () { var on = $('advDigestOn').checked; call('kzwAdvisorSchedule', S.token, on).then(function () { msg($('advSetMsg'), on ? 'Еженедельная сводка включена: каждый понедельник в 9:00 в Битрикс24' : 'Еженедельная сводка выключена', 'ok'); if (S.adv) S.adv.digestOn = on; }).catch(function (e) { msg($('advSetMsg'), e.message, 'err'); $('advDigestOn').checked = !on; }); });
+  $('advDigestNow').addEventListener('click', function () { var b = $('advDigestNow'); b.disabled = true; call('kzwAdvisorDigestNow', S.token).then(function (r) { msg($('advSetMsg'), 'Сводка в Битрикс24: ' + r, 'ok'); }).catch(function (e) { msg($('advSetMsg'), e.message, 'err'); }).then(function () { b.disabled = false; }); });
+  // ── интеграция: дашборд, карточка позиции, заказ, ссылка ?tab=
+  function advDashCard() {
+    if (!S.adv) return card('💡 Советник', '<p class="hint">' + (S.advLoading ? 'Считаю рекомендации…' : (S.offline ? 'Недоступен офлайн' : '—')) + '</p>');
+    var al = S.adv.alerts.slice(0, 7);
+    return card('💡 Советник: на что обратить внимание', (al.length ? '<ul class="adv-list">' + al.map(function (a) { return '<li>' + ADV_LEVEL[a.level] + ' <a href="#" data-adv="' + esc(a.id) + '">' + esc(a.title) + '</a></li>'; }).join('') + (S.adv.alerts.length > 7 ? '<li class="hint">… ещё ' + (S.adv.alerts.length - 7) + '</li>' : '') + '</ul>' : '<p class="msg ok" style="display:block;margin:4px 0">Срочных рекомендаций нет.</p>') + '<div class="actions" style="justify-content:flex-start"><button class="secondary" data-adv="">Открыть Советник</button></div>', 'wide');
+  }
+  $('dGrid').addEventListener('click', function (e) { var a = e.target.closest('[data-adv]'); if (!a) return; e.preventDefault(); advOpen(a.dataset.adv || null); });
+  function advItemHtml(it) {
+    var o = advByKey(it.key); if (!o) return '';
+    return '<h4 style="margin:10px 0 2px;color:var(--hdr)">💡 Советник</h4><div class="kpis">' + kpi(o.rate ? fmtQ(Math.round(o.rate * 30 * 100) / 100) : '—', 'Расход в месяц (по снимкам)' + (o.consumed !== null && o.consumed !== undefined ? ' · всего ' + fmtQ(o.consumed) : '')) + kpi(o.days === null ? '—' : o.days + ' <small>дн.</small>', 'Хватит при текущем расходе', o.days === null ? 'grey' : (o.days <= o.lead ? 'red' : (o.days <= o.lead + 14 ? 'yel' : 'grn'))) + kpi('<span class="abc ' + o.abc + '">' + o.abc + '</span>' + (o.xyz ? ' / ' + o.xyz : ''), 'Класс ABC / XYZ') + kpi(fmtQ(o.transit), 'В пути (заказы)', o.transit ? 'grn' : 'grey') + kpi(fmtQ(o.reserve), 'Резерв под сделки Б24', o.reserve ? 'yel' : 'grey') + kpi(o.rop ? fmtQ(o.rop) : '—', 'Точка заказа · срок поставки ' + o.lead + ' дн.') + kpi(o.autoMin ? fmtQ(o.autoMin) : '—', 'Расчётный минимум' + (o.min !== null && o.autoMin ? ' (задан ' + fmtQ(o.min) + ')' : '')) + kpi(o.recQty ? fmtQ(o.recQty) : '—', 'Рекомендуемое кол-во к заказу', o.recQty ? 'red' : 'grey') + '</div>' +
+      (o.flags.length ? '<p>' + o.flags.map(function (f) { return '<span class="adv-flag ' + f + '">' + ADV_FLAG[f] + '</span>'; }).join(' ') + (o.recQty ? ' <button class="secondary" data-advcart="' + esc(it.key) + '" style="padding:2px 8px">🛒 В корзину ' + fmtQ(o.recQty) + '</button>' : '') + '</p>' : '');
+  }
+  $('itemBody').addEventListener('click', function (e) { var b = e.target.closest('button[data-advcart]'); if (b) { advToCart([b.dataset.advcart]); msg($('itemMsg'), 'Добавлено в корзину заказа', 'ok'); } });
+  function advOrderCell(k) { var o = advByKey(k); if (!o) return ''; return (o.days === null ? '<span class="hint">расход не измерен</span>' : '<b class="' + (o.days <= o.lead ? 'red' : (o.days <= o.lead + 14 ? 'yel' : '')) + '">' + o.days + ' дн.</b>') + ' <span class="abc ' + o.abc + '">' + o.abc + '</span>' + (o.recQty ? ' <span class="hint">рек. ' + fmtQ(o.recQty) + '</span>' : '') + (o.transit ? ' <span class="hint">в пути ' + fmtQ(o.transit) + '</span>' : '') + (o.reserve ? ' <span class="hint">резерв ' + fmtQ(o.reserve) + '</span>' : ''); }
+  function advAfterLogin() {
+    advLoad(true);
+    var m = location.search.match(/[?&]tab=([a-z]+)/); if (m && VIEWS.indexOf(m[1]) !== -1 && m[1] !== 'dash') setTimeout(function () { showView(m[1]); }, 50);
+  }
 
   // ═════════════════════════════ ЛИСТЫ КНИГИ
   var SHEET_ICONS = [
@@ -2350,7 +2663,7 @@
   }
   $('pageBack').addEventListener('click', function () { showView('sheets'); });
   var B = { current: null, blocks: [] }, BLOCK_NAMES = { text: 'Текст', links: 'Ссылки', sheet: 'Фрагмент листа', image: 'Картинка', kpi: 'Показатели' };
-  var TAB_DEFAULTS = { dash: 'Дашборд', items: 'Остатки', crit: 'Критический запас', order: '🛒 Заказ', excl: 'Исключения', wh: 'Склады', brands: 'Бренды', groups: 'Группы замен', hist: 'История', recon: 'Сверка', anl: 'Аналоги', stat: 'Статистика', sheets: 'Листы книги' };
+  var TAB_DEFAULTS = { dash: 'Дашборд', advisor: '💡 Советник', items: 'Остатки', crit: 'Критический запас', order: '🛒 Заказ', excl: 'Исключения', wh: 'Склады', brands: 'Бренды', groups: 'Группы замен', hist: 'История', recon: 'Сверка', anl: 'Аналоги', stat: 'Статистика', sheets: 'Листы книги' };
   function renderBuilder() {
     var pages = S.boot.pages || [];
     $('bList').innerHTML = pages.map(function (p) { return '<div class="bitem' + (B.current && B.current.id === p.id ? ' active' : '') + '" data-id="' + esc(p.id) + '"><span>' + esc(p.icon || '📄') + '</span><span style="flex:1">' + esc(p.title) + '</span><span class="hint">' + (p.tab ? 'вкладка' : 'плитка') + '</span></div>'; }).join('') || '<p class="hint">Страниц пока нет — создайте первую.</p>';
@@ -2510,7 +2823,22 @@
   $('edgeCheck').addEventListener('click', function () { msg($('edgeMsg'), ''); call('kzwEdgeStatus', S.token).then(edgeShow).catch(function (e) { msg($('edgeMsg'), e.message, 'err'); }); });
   $('edgeSave').addEventListener('click', function () { $('edgeSave').disabled = true; call('kzwEdgeSetup', S.token, $('edgeUrl').value, $('edgeKey').value).then(function (r) { edgeShow(r); $('edgeKey').value = ''; msg($('edgeMsg'), 'Ускоритель подключён. Данные начнут отдаваться из кэша через несколько секунд.', 'ok'); }).catch(function (e) { msg($('edgeMsg'), e.message, 'err'); }).then(function () { $('edgeSave').disabled = false; }); });
   $('edgeOff').addEventListener('click', function () { if (!confirm('Отключить ускоритель? Приложение продолжит работать напрямую с Google; Worker перестанет получать сигналы о правках.')) return; call('kzwEdgeOff', S.token).then(function () { edgeShow(null); msg($('edgeMsg'), 'Отключено', 'ok'); }).catch(function (e) { msg($('edgeMsg'), e.message, 'err'); }); });
-  $('tabs').addEventListener('click', function (e) { var t = e.target.closest('.tab'); if (t && t.dataset.tab === 'passwords' && S.role === 'wizard') setTimeout(function () { call('kzwEdgeStatus', S.token).then(edgeShow).catch(function () {}); }, 50); });
+  // v1.9: Битрикс24
+  function b24Show(r) {
+    $('b24Domain').value = r.domain || ''; $('b24Wizards').value = r.wizards || ''; $('b24Notify').value = r.notify || ''; $('b24NotifyOn').checked = r.notifyOn !== false; if (r.hookSet && !$('b24Hook').value) $('b24Hook').placeholder = (r.hookMasked || 'вебхук задан') + ' (введите новый, чтобы заменить)';
+    $('b24Info').innerHTML = (r.domain ? 'Портал <b>' + esc(r.domain) + '</b>' : 'Портал не указан') + ' · вебхук: ' + (r.hookSet ? (r.hookOk ? '<span class="stat grn">работает' + (r.hookUser ? ' (' + esc(r.hookUser) + ')' : '') + '</span>' : '<span class="stat red">ошибка: ' + esc(r.hookErr || '') + '</span>') : '<span class="stat none">не задан</span>') + ' · уведомления: ' + (r.notifyOn ? 'вкл' : 'выкл') + (r.notify ? ' → ' + esc(r.notify) : '');
+    $('b24Addr').innerHTML = r.app ? '<b>Для администратора портала</b> (Разработчикам → Другое → Локальное приложение, серверное; права: <code>crm, user, placement</code>; «Показывать в левом меню»):<br>Путь обработчика: <code>' + esc(r.app) + '</code><br>Путь установки: <code>' + esc(r.install) + '</code><br>После создания открыть приложение и нажать «Завершить установку» — появится вкладка «Остатки на складе» в сделках.' : 'Сначала подключите ускоритель (блок выше) — приложение Битрикс24 работает через него.';
+  }
+  function b24Cfg() { return { domain: $('b24Domain').value, wizards: $('b24Wizards').value, hook: $('b24Hook').value.trim() || undefined, notify: $('b24Notify').value, notifyOn: $('b24NotifyOn').checked }; }
+  $('b24Check').addEventListener('click', function () { msg($('b24Msg'), ''); call('kzwB24Status', S.token).then(b24Show).catch(function (e) { msg($('b24Msg'), e.message, 'err'); }); });
+  $('b24Save').addEventListener('click', function () {
+    var c = b24Cfg();
+    $('b24Save').disabled = true;
+    call('kzwB24Status', S.token).then(function (cur) { if (c.hook === undefined) c.hook = cur.hookSet ? '__keep__' : ''; return call('kzwB24Setup', S.token, c); })
+      .then(function (r) { b24Show(r); $('b24Hook').value = ''; msg($('b24Msg'), 'Сохранено', 'ok'); }).catch(function (e) { msg($('b24Msg'), e.message, 'err'); }).then(function () { $('b24Save').disabled = false; });
+  });
+  $('b24Test').addEventListener('click', function () { msg($('b24Msg'), 'Отправляю…', 'info'); call('kzwB24Test', S.token).then(function (r) { msg($('b24Msg'), r, 'ok'); }).catch(function (e) { msg($('b24Msg'), e.message, 'err'); }); });
+  $('tabs').addEventListener('click', function (e) { var t = e.target.closest('.tab'); if (t && t.dataset.tab === 'passwords' && S.role === 'wizard') setTimeout(function () { call('kzwEdgeStatus', S.token).then(edgeShow).catch(function () {}); call('kzwB24Status', S.token).then(b24Show).catch(function () {}); }, 50); });
   var saved = null; try { saved = localStorage.getItem('kzw_token'); } catch (e) {}
   if (saved && (GAS || apiUrl())) { S.token = saved; start(); } else showLogin();
 })();

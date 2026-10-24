@@ -1,6 +1,6 @@
 /**
  * ============================================================================
- *  КОНТРОЛЬ НЕСНИЖАЕМОГО ЗАПАСА — ВЕБ-ПРИЛОЖЕНИЕ (серверная часть)  v1.8
+ *  КОНТРОЛЬ НЕСНИЖАЕМОГО ЗАПАСА — ВЕБ-ПРИЛОЖЕНИЕ (серверная часть)  v2.0
  * ============================================================================
  *  Файл добавляется в проект Apps Script таблицы «Контроль_неснижаемого_запаса»
  *  РЯДОМ с основным скриптом (Code.gs, KontrolZapasa v2.0) и файлом KZ_WebApp.html.
@@ -24,7 +24,7 @@
  */
 
 var KZW = {
-  VERSION: '1.8',
+  VERSION: '2.0',
   HTML_FILE: 'KZ_WebApp',
   TITLE: 'Контроль неснижаемого запаса',
   TOKEN_TTL_MS: 12 * 3600 * 1000,
@@ -91,16 +91,22 @@ function kzwLogin(password) {
   password = String(password || '').trim();
   var role = 'viewer';
   if (password) { if (password === kzwPass_()) role = 'wizard'; else return { error: 'Неверный пароль' }; }
+  return { token: kzwMintToken_(role), role: role };
+}
+/** Новый токен сессии для роли (вход по паролю или через Битрикс24); попутно чистит просроченные. */
+function kzwMintToken_(role, extra) {
   var token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
   var props = PropertiesService.getScriptProperties(), all = props.getProperties(), now = Date.now();
   Object.keys(all).forEach(function (k) {
     if (k.indexOf('KZW_TOK_') === 0) { try { if (JSON.parse(all[k]).exp < now) props.deleteProperty(k); } catch (e) { props.deleteProperty(k); } }
   });
-  props.setProperty('KZW_TOK_' + token, JSON.stringify({ role: role, exp: now + KZW.TOKEN_TTL_MS }));
-  return { token: token, role: role };
+  var s = { role: role, exp: now + KZW.TOKEN_TTL_MS }; if (extra) Object.keys(extra).forEach(function (k) { s[k] = extra[k]; });
+  props.setProperty('KZW_TOK_' + token, JSON.stringify(s));
+  return token;
 }
 function kzwLogout(token) { try { PropertiesService.getScriptProperties().deleteProperty('KZW_TOK_' + token); } catch (e) {} return true; }
 function kzwAuth_(token, minRole) {
+  if (token === '__internal__') return 'wizard';   // v2.0: вызовы внутри скрипта (советник, сводка, резерв)
   var raw = token ? PropertiesService.getScriptProperties().getProperty('KZW_TOK_' + token) : null;
   if (!raw) throw new Error('AUTH: сессия истекла — войдите заново');
   var s = JSON.parse(raw);
@@ -207,7 +213,7 @@ function kzwGetData(token) {
     if (out.history.length > KZW.HISTORY_MAX) out.history = out.history.slice(out.history.length - KZW.HISTORY_MAX);
   }
   out.state = kzwStateInfo_(ss);
-  try { if (!out.state.busy) kzwSnapshot_(ss, out.items.map(function (a) { return { key: a[0], tot: a[6], value: a[12] }; })); } catch (eS) {}   // v1.3: снимок остатков на дату загрузки
+  try { if (!out.state.busy && kzwSnapshot_(ss, out.items.map(function (a) { return { key: a[0], tot: a[6], value: a[12], stat: a[18] }; })) > 0) { kzwB24Notify_(ss, out); try { kzwOrdersAutoClose_(ss, out.items); } catch (e1) {} try { kzwReserveRefresh_(ss); } catch (e2) {} } } catch (eS) {}   // v1.3: снимок остатков на дату загрузки; v1.9: уведомление в Битрикс24; v2.0: автозакрытие заказов, резерв
   return out;
 }
 
@@ -1049,7 +1055,7 @@ function kzwSnapshot_(ss, items) {
   var stamp = kzwDateStr_(load), sh = ss.getSheetByName(KZW_SNAP.SHEET);
   if (!sh) {
     sh = ss.insertSheet(KZW_SNAP.SHEET, ss.getNumSheets());
-    sh.getRange(1, 1, 1, 4).setValues([['Дата загрузки', 'Ключ', 'Остаток в контроле', 'Стоимость, BYN']]).setBackground(COLOR_HEAD).setFontColor('#FFFFFF').setFontWeight('bold');
+    sh.getRange(1, 1, 1, 5).setValues([['Дата загрузки', 'Ключ', 'Остаток в контроле', 'Стоимость, BYN', 'Статус']]).setBackground(COLOR_HEAD).setFontColor('#FFFFFF').setFontWeight('bold');
     sh.setFrozenRows(1); sh.getRange('B:B').setNumberFormat('@'); try { sh.hideSheet(); } catch (e) {}
   }
   var props = PropertiesService.getScriptProperties();
@@ -1057,19 +1063,21 @@ function kzwSnapshot_(ss, items) {
   var last = sh.getLastRow(), dates = {};
   if (last > 1) sh.getRange(2, 1, last - 1, 1).getValues().forEach(function (r) { var d = r[0] instanceof Date ? kzwDateStr_(r[0]) : String(r[0]); if (d) dates[d] = 1; });
   if (dates[stamp]) { props.setProperty('KZW_SNAP_LAST', stamp); return 0; }
-  var rows = items.map(function (it) { return [load, it.key, it.tot, it.value]; });
+  if (sh.getMaxColumns() < 5) sh.insertColumnsAfter(sh.getMaxColumns(), 5 - sh.getMaxColumns());
+  if (String(sh.getRange(1, 5).getValue()) !== 'Статус') sh.getRange(1, 5).setValue('Статус').setBackground(COLOR_HEAD).setFontColor('#FFFFFF').setFontWeight('bold');
+  var rows = items.map(function (it) { return [load, it.key, it.tot, it.value, String(it.stat || '')]; });
   if (!rows.length) return 0;
   // ограничение глубины: оставить последние KEEP загрузок
   var dl = Object.keys(dates).sort();
   if (dl.length >= KZW_SNAP.KEEP) {
     var drop = {}; dl.slice(0, dl.length - KZW_SNAP.KEEP + 1).forEach(function (d) { drop[d] = 1; });
-    var all = sh.getRange(2, 1, last - 1, 4).getValues().filter(function (r) { var d = r[0] instanceof Date ? kzwDateStr_(r[0]) : String(r[0]); return !drop[d]; });
-    sh.getRange(2, 1, last - 1, 4).clearContent();
-    if (all.length) sh.getRange(2, 1, all.length, 4).setValues(all);
+    var all = sh.getRange(2, 1, last - 1, 5).getValues().filter(function (r) { var d = r[0] instanceof Date ? kzwDateStr_(r[0]) : String(r[0]); return !drop[d]; });
+    sh.getRange(2, 1, last - 1, 5).clearContent();
+    if (all.length) sh.getRange(2, 1, all.length, 5).setValues(all);
     last = all.length + 1;
   }
   ensureRows_(sh, last + rows.length + 5);
-  for (var i = 0; i < rows.length; i += 2000) { var part = rows.slice(i, i + 2000); sh.getRange(last + 1 + i, 1, part.length, 4).setValues(part); }
+  for (var i = 0; i < rows.length; i += 2000) { var part = rows.slice(i, i + 2000); sh.getRange(last + 1 + i, 1, part.length, 5).setValues(part); }
   sh.getRange(last + 1, 1, rows.length, 1).setNumberFormat('dd.MM.yyyy');
   props.setProperty('KZW_SNAP_LAST', stamp);
   return rows.length;
@@ -1129,9 +1137,9 @@ function kzwOrdSheet_(ss, create) {
   return ws;
 }
 /** Все сохранённые заказы: [{id,name,status,created,updated,lines:[{key,art,name,brand,type,unit,qty,price,sum,grp,stock,min,wh,sup,note}]}]. */
-function kzwOrders(token) {
+function kzwOrders(token, ssOpt) {
   kzwAuth_(token);
-  var ws = kzwOrdSheet_(kzwSs_(), false); if (!ws || ws.getLastRow() < 2) return { orders: [], statuses: KZW_ORD.STATUSES };
+  var ws = kzwOrdSheet_(ssOpt || kzwSs_(), false); if (!ws || ws.getLastRow() < 2) return { orders: [], statuses: KZW_ORD.STATUSES };
   var v = ws.getRange(2, 1, ws.getLastRow() - 1, KZW_ORD.HDR.length).getValues(), by = {}, list = [];
   v.forEach(function (r) {
     var id = String(r[0] || '').trim(); if (!id) return;
@@ -1189,7 +1197,7 @@ function kzwDeleteOrder(token, id) {
  *   1) kzwAuth_(…, 'wizard') перед каждой правкой дёргает POST <EDGE_URL>/edge/bump (ключ EDGE_KEY);
  *   2) Worker раз в 5 минут вызывает kzwEdgeSig и сравнивает подпись (ловит правки прямо в листах);
  *   3) после пересборки (kzwStatus: busy → false) Worker перечитывает данные сам.
- *  Подключение: WIZARD → «Пароль» → «⚡ Ускоритель» (kzwEdgeSetup) — адрес Worker'а и ключ из ПОДКЛЮЧЕНИЕ.txt.
+ *  Подключение: WIZARD → «Пароль» → «⚡ Ускоритель» (kzwEdgeSetup) — адрес Worker'а и ключ из CONNECT.txt.
  */
 var KZW_EDGE = { URL: 'EDGE_URL', KEY: 'EDGE_KEY' };
 function kzwEdgeProps_() { var p = PropertiesService.getScriptProperties(); return { url: String(p.getProperty(KZW_EDGE.URL) || '').replace(/\/+$/, ''), key: String(p.getProperty(KZW_EDGE.KEY) || '') }; }
@@ -1221,7 +1229,7 @@ function kzwEdgeSetup(token, url, key) {
   kzwAuth_(token, 'wizard');
   url = String(url || '').trim().replace(/\/+$/, ''); key = String(key || '').trim();
   if (!/^https:\/\/[a-z0-9.-]+\.workers\.dev$|^https:\/\/[^\/\s]+$/.test(url)) throw new Error('Адрес ускорителя должен быть вида https://kz-edge.<имя>.workers.dev');
-  if (key.length < 16) throw new Error('Ключ слишком короткий — скопируйте его из ПОДКЛЮЧЕНИЕ.txt');
+  if (key.length < 16) throw new Error('Ключ слишком короткий — скопируйте его из CONNECT.txt');
   var r = UrlFetchApp.fetch(url + '/edge/ping', { headers: { 'X-Edge-Key': key }, muteHttpExceptions: true });
   var code = r.getResponseCode(), body = {}; try { body = JSON.parse(r.getContentText()); } catch (e) {}
   if (code !== 200 || !body.ok) throw new Error('Ускоритель не ответил (' + code + '): ' + (body.error || r.getContentText().slice(0, 120)));
@@ -1237,4 +1245,307 @@ function kzwEdgeStatus(token) {
   try { var r = UrlFetchApp.fetch(e.url + '/edge/status', { headers: { 'X-Edge-Key': e.key }, muteHttpExceptions: true }); res.code = r.getResponseCode(); try { res.edge = JSON.parse(r.getContentText()); } catch (e1) { res.edge = null; } res.okPing = res.code === 200 && !!(res.edge && res.edge.ok); }
   catch (err) { res.okPing = false; res.error = String(err && err.message || err); }
   return res;
+}
+
+
+// ═══════════════════════════════════════════════════════════════ v1.9: БИТРИКС24
+/*
+ *  Локальное приложение Битрикс24 работает через ускоритель (kz-edge): Битрикс открывает <EDGE_URL>/b24/app,
+ *  Worker проверяет пользователя (user.current на портале) и просит здесь токен — kzwB24Login (ключ EDGE_KEY).
+ *  Роль: WIZARD — если e-mail или ID пользователя Битрикс24 перечислен в B24_WIZARDS, иначе ПРОСМОТР.
+ *  Вкладка в сделке: Worker берёт товары сделки и спрашивает kzwB24Lookup — остатки / статусы / группы замен.
+ *  Уведомления: после новой выгрузки 1С (новый снимок) kzwB24Notify_ шлёт через входящий вебхук B24_HOOK
+ *  сообщение получателям B24_NOTIFY (ID пользователей — im.notify.system; chatNN — im.message.add).
+ */
+var KZW_B24 = { DOMAIN: 'B24_DOMAIN', WIZARDS: 'B24_WIZARDS', HOOK: 'B24_HOOK', NOTIFY: 'B24_NOTIFY', ON: 'B24_NOTIFY_ON' };
+function kzwB24Props_() {
+  var p = PropertiesService.getScriptProperties();
+  return { domain: String(p.getProperty(KZW_B24.DOMAIN) || '').toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, ''), wizards: String(p.getProperty(KZW_B24.WIZARDS) || ''), hook: String(p.getProperty(KZW_B24.HOOK) || '').replace(/\/+$/, ''), notify: String(p.getProperty(KZW_B24.NOTIFY) || ''), notifyOn: p.getProperty(KZW_B24.ON) !== '0' };
+}
+function kzwB24Setup(token, cfg) {
+  kzwAuth_(token, 'wizard');
+  var p = PropertiesService.getScriptProperties(), c = cfg || {};
+  var dom = String(c.domain || '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  if (dom && !/^[a-z0-9.-]+\.bitrix24\.[a-z]+$|^[a-z0-9.-]+\.[a-z]{2,}$/.test(dom)) throw new Error('Домен портала должен быть вида company.bitrix24.by');
+  var hook = String(c.hook || '').trim().replace(/\/+$/, '');
+  if (hook === '__keep__') hook = kzwB24Props_().hook;   // поле пустое — оставить прежний вебхук
+  if (hook && !/^https:\/\/[^\/\s]+\/rest\/\d+\/[A-Za-z0-9]+$/.test(hook)) throw new Error('Входящий вебхук должен быть вида https://portal.bitrix24.by/rest/1/xxxxxxxx');
+  p.setProperty(KZW_B24.DOMAIN, dom); p.setProperty(KZW_B24.WIZARDS, String(c.wizards || '').trim()); p.setProperty(KZW_B24.HOOK, hook); p.setProperty(KZW_B24.NOTIFY, String(c.notify || '').trim()); p.setProperty(KZW_B24.ON, c.notifyOn === false ? '0' : '1');
+  return kzwB24Status(token);
+}
+function kzwB24Status(token) {
+  kzwAuth_(token);
+  var b = kzwB24Props_(), e = kzwEdgeProps_();
+  var res = { domain: b.domain, wizards: b.wizards, hookSet: !!b.hook, hookMasked: b.hook ? b.hook.replace(/\/rest\/(\d+)\/[A-Za-z0-9]+$/, '/rest/$1/••••••') : '', notify: b.notify, notifyOn: b.notifyOn, edge: e.url, app: e.url ? e.url + '/b24/app' : '', install: e.url ? e.url + '/b24/install' : '' };
+  if (b.hook) { try { var r = kzwB24Rest_('profile', {}); res.hookOk = !!(r && r.result); res.hookUser = r && r.result ? (r.result.NAME + ' ' + r.result.LAST_NAME).trim() : ''; res.hookErr = r && r.error_description || ''; } catch (err) { res.hookOk = false; res.hookErr = String(err.message || err); } }
+  return res;
+}
+function kzwB24Rest_(method, params) {
+  var b = kzwB24Props_(); if (!b.hook) throw new Error('Входящий вебхук Битрикс24 не задан');
+  var r = UrlFetchApp.fetch(b.hook + '/' + method + '.json', { method: 'post', contentType: 'application/json', payload: JSON.stringify(params || {}), muteHttpExceptions: true });
+  try { return JSON.parse(r.getContentText()); } catch (e) { return { error: 'bad_response', error_description: r.getContentText().slice(0, 200) }; }
+}
+/** Пробное уведомление получателям (кнопка «Проверить» в приложении). */
+function kzwB24Test(token) {
+  kzwAuth_(token, 'wizard');
+  var n = kzwB24Send_('Проверка связи: уведомления «Контроль неснижаемого запаса» подключены. ' + (kzwEdgeProps_().url || ''));
+  return 'Отправлено сообщений: ' + n.sent + (n.errors.length ? ' · ошибки: ' + n.errors.join('; ') : '');
+}
+function kzwB24Send_(text) {
+  var b = kzwB24Props_(), out = { sent: 0, errors: [] }; if (!b.hook || !b.notify) return out;
+  b.notify.split(/[,;\s]+/).filter(Boolean).forEach(function (to) {
+    try {
+      var r = /^chat/i.test(to) ? kzwB24Rest_('im.message.add', { DIALOG_ID: to, MESSAGE: text }) : kzwB24Rest_('im.notify.system', { USER_ID: to.replace(/^user/i, ''), MESSAGE: text });
+      if (r && r.result) out.sent++; else out.errors.push(to + ': ' + (r && r.error_description || 'нет ответа'));
+    } catch (e) { out.errors.push(to + ': ' + e.message); }
+  });
+  return out;
+}
+/** После новой выгрузки 1С: какие позиции стали КРАСНЫМИ по сравнению с предыдущим снимком → сообщение в Битрикс24. */
+function kzwB24Notify_(ss, out) {
+  var b = kzwB24Props_(); if (!b.hook || !b.notify || !b.notifyOn) return;
+  var items = out.items, reds = items.filter(function (a) { return String(a[18] || '').indexOf('КРАСНЫЙ') === 0; });
+  var prevRed = null, sh = ss.getSheetByName(KZW_SNAP.SHEET);
+  if (sh && sh.getLastRow() > 1 && sh.getMaxColumns() >= 5) {
+    var v = sh.getRange(2, 1, sh.getLastRow() - 1, 5).getValues(), byDate = {};
+    v.forEach(function (r) { var d = r[0] instanceof Date ? kzwDateStr_(r[0]) : String(r[0]); if (!d) return; (byDate[d] = byDate[d] || []).push(r); });
+    var dates = Object.keys(byDate).sort(), prev = dates.length >= 2 ? byDate[dates[dates.length - 2]] : null;
+    if (prev && prev.some(function (r) { return r[4]; })) { prevRed = {}; prev.forEach(function (r) { if (String(r[4] || '').indexOf('КРАСНЫЙ') === 0) prevRed[String(r[1])] = 1; }); }
+  }
+  var fresh = prevRed ? reds.filter(function (a) { return !prevRed[a[0]]; }) : null;
+  var url = kzwEdgeProps_().url || '';
+  var lines = ['[B]Контроль неснижаемого запаса[/B] — загружена выгрузка 1С от ' + (out.settings.lastLoad || '') + '.', 'КРАСНЫХ позиций: ' + reds.length + (fresh ? ', из них новых: ' + fresh.length : '') + '.'];
+  (fresh && fresh.length ? fresh : []).slice(0, 15).forEach(function (a) { lines.push('• ' + a[2] + (a[3] ? ' · ' + a[3] : '') + ' — остаток ' + a[6] + (a[14] !== null && a[14] !== undefined ? ' / мин. ' + a[14] : '')); });
+  if (fresh && fresh.length > 15) lines.push('… и ещё ' + (fresh.length - 15));
+  if (url) lines.push('Открыть: ' + url);
+  if (fresh && !fresh.length && reds.length) lines.push('Новых критических позиций нет.');
+  kzwB24Send_(lines.join('\n'));
+}
+/** Вход пользователя Битрикс24 (вызывает Worker ключом EDGE_KEY): проверка портала, роль по списку WIZARD, токен. */
+function kzwB24Login(key, info) {
+  var e = kzwEdgeProps_(); if (!e.key || String(key || '') !== e.key) throw new Error('Неверный ключ ускорителя');
+  var b = kzwB24Props_(), dom = String(info && info.domain || '').toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  if (!b.domain) throw new Error('В программе не указан домен портала Битрикс24 (WIZARD → Пароль → Битрикс24)');
+  if (dom !== b.domain) throw new Error('Портал ' + dom + ' не совпадает с настроенным ' + b.domain);
+  var email = String(info.email || '').toLowerCase(), id = String(info.userId || '');
+  var wiz = b.wizards.toLowerCase().split(/[,;\s]+/).filter(Boolean), role = (wiz.indexOf(email) !== -1 || (id && wiz.indexOf(id) !== -1) || wiz.indexOf('id' + id) !== -1) ? 'wizard' : 'viewer';
+  var token = kzwMintToken_(role, { b24: id, name: String(info.name || '') });
+  return { token: token, role: role, name: String(info.name || ''), email: email };
+}
+/** Товары сделки → позиции склада: по артикулу/ключу (точно или как слово в названии), иначе по названию. */
+function kzwB24Lookup(token, rows, ssOpt) {
+  kzwAuth_(token);
+  var ss = ssOpt || kzwSs_(), wsO = kzwSheet_(ss, SH_OST), lr = wsO.getLastRow(); if (lr < 2) return [];
+  var v = wsO.getRange(2, 1, lr - 1, OST_COLS).getValues(), items = [];
+  var norm = function (s) { return String(s == null ? '' : s).toUpperCase().replace(/[\s\-_\/.,]/g, ''); };
+  for (var i = 0; i < v.length; i++) { var r = v[i]; if (!r[0]) continue; items.push({ key: String(r[0]), art: String(r[C_ART - 1] || ''), name: String(r[C_NAME - 1] || ''), brand: String(r[C_BRAND - 1] || ''), tot: kzwNum_(r[C_TOTAL - 1]), min: r[C_MIN - 1] === '' ? null : kzwNum_(r[C_MIN - 1]), stat: String(r[C_STAT - 1] || ''), grp: String(r[C_GRP - 1] || ''), nk: norm(r[0]), na: norm(r[C_ART - 1]), nn: norm(r[C_NAME - 1]) }); }
+  var grpTot = {}; items.forEach(function (it) { if (it.grp) grpTot[it.grp] = (grpTot[it.grp] || 0) + it.tot; });
+  var pick = function (it) { return { key: it.key, art: it.art, name: it.name, brand: it.brand, tot: it.tot, min: it.min, stat: it.stat, grp: it.grp, grpTot: it.grp ? grpTot[it.grp] : null }; };
+  return (rows || []).slice(0, ssOpt ? 5000 : 60).map(function (q) {
+    var name = String(q.name || ''), code = norm(q.code || ''), found = [], seen = {};
+    var add = function (it) { if (!seen[it.key] && found.length < 6) { seen[it.key] = 1; found.push(pick(it)); } };
+    if (code && code.length >= 3) items.forEach(function (it) { if (it.na === code || it.nk === code) add(it); });
+    var toks = name.toUpperCase().split(/[\s,;()]+/).map(function (t) { return norm(t); }).filter(function (t) { return t.length >= 4 && /\d/.test(t); });
+    toks.forEach(function (t) { items.forEach(function (it) { if (it.na === t || it.nk === t) add(it); }); });
+    if (!found.length) toks.forEach(function (t) { items.forEach(function (it) { if (it.nn.indexOf(t) !== -1 || (it.na && t.indexOf(it.na) !== -1 && it.na.length >= 5)) add(it); }); });
+    if (!found.length && name.length >= 6) { var nn = norm(name); items.forEach(function (it) { if (it.nn === nn) add(it); }); }
+    // аналоги: другие позиции тех же групп замен
+    var alt = []; found.forEach(function (f) { if (f.grp) items.forEach(function (it) { if (it.grp === f.grp && !seen[it.key] && alt.length < 8) { seen[it.key] = 1; alt.push(pick(it)); } }); });
+    return { name: name, code: String(q.code || ''), qty: kzwNum_(q.qty), found: found, alt: alt };
+  });
+}
+
+
+// ═══════════════════════════════════════════════════════════════ v2.0: СОВЕТНИК (расход, срок до исчерпания, ABC/XYZ, точка заказа, резерв, наборы, неликвид)
+var KZW_ADV = { RESERVE: 'Резерв Б24', SETS: 'Наборы', DIGEST_FN: 'kzwAdvisorDigest', DIGEST_FLAG: 'KZW_DIGEST_ON' };
+var KZW_ADV_DEF = { leadDefault: 30, lead: {}, safetyPct: 30, cyclDays: 30, abcA: 80, abcB: 95, xyzX: 0.5, xyzY: 1.0, deadDays: 365, season: {}, minDays: 14, reserveOn: true, alertClasses: 'AB' };
+function kzwAdvSettings_(ss) { var st = kzwSettings_(ss), a = st.advisor || {}, out = {}; Object.keys(KZW_ADV_DEF).forEach(function (k) { out[k] = a[k] === undefined || a[k] === null || a[k] === '' ? KZW_ADV_DEF[k] : a[k]; }); return out; }
+
+/** Расход по снимкам остатков: по ключу — списано (c), пришло (a), дней (d), загрузок (n), интервалы [дней, списано] для оценки колебаний. */
+function kzwConsumption_(ss) {
+  var sh = ss.getSheetByName(KZW_SNAP.SHEET), res = { keys: {}, loads: 0, days: 0, from: '', to: '' };
+  if (!sh || sh.getLastRow() < 2) return res;
+  var v = sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues(), byKey = {}, dates = {};
+  for (var i = 0; i < v.length; i++) { var d = v[i][0] instanceof Date ? v[i][0].getTime() : Date.parse(v[i][0]); if (!d) continue; var k = String(v[i][1]); dates[d] = 1; (byKey[k] = byKey[k] || []).push([d, kzwNum_(v[i][2])]); }
+  var dl = Object.keys(dates).map(Number).sort(function (a, b) { return a - b; }); res.loads = dl.length;
+  if (dl.length >= 2) { res.days = Math.round((dl[dl.length - 1] - dl[0]) / 86400000); res.from = kzwDateStr_(new Date(dl[0])); res.to = kzwDateStr_(new Date(dl[dl.length - 1])); }
+  Object.keys(byKey).forEach(function (k) {
+    var seq = byKey[k].sort(function (a, b) { return a[0] - b[0]; }), c = 0, a = 0, iv = [];
+    for (var j = 1; j < seq.length; j++) { var diff = seq[j][1] - seq[j - 1][1], days = (seq[j][0] - seq[j - 1][0]) / 86400000; if (diff < 0) { c += -diff; iv.push([days, -diff]); } else { a += diff; iv.push([days, 0]); } }
+    res.keys[k] = { c: c, a: a, d: seq.length >= 2 ? Math.round((seq[seq.length - 1][0] - seq[0][0]) / 86400000) : 0, n: seq.length, iv: iv, last: seq[seq.length - 1][1] };
+  });
+  return res;
+}
+/** Резерв под открытые сделки Битрикс24 (входящий вебхук): лист «Резерв Б24» [ключ, кол-во, сделок, товар]. */
+function kzwReserveRefresh_(ss) {
+  var b = kzwB24Props_(); if (!b.hook) return { n: 0, off: true };
+  var deals = [], start = 0;
+  for (var guard = 0; guard < 40; guard++) { var r = kzwB24Rest_('crm.deal.list', { filter: { CLOSED: 'N' }, select: ['ID', 'TITLE'], start: start }); if (!r || !r.result) break; deals = deals.concat(r.result); if (r.next === undefined || r.next === null) break; start = r.next; }
+  var rows = [];
+  for (var i = 0; i < deals.length; i += 50) {
+    var cmd = {}; deals.slice(i, i + 50).forEach(function (d) { cmd['d' + d.ID] = 'crm.deal.productrows.get?id=' + d.ID; });
+    var br = kzwB24Rest_('batch', { halt: 0, cmd: cmd }); var res = br && br.result && br.result.result || {};
+    Object.keys(res).forEach(function (k) { (res[k] || []).forEach(function (p) { rows.push({ deal: k.slice(1), name: String(p.PRODUCT_NAME || ''), code: String(p.PRODUCT_CODE || ''), qty: kzwNum_(p.QUANTITY) }); }); });
+  }
+  var by = {};
+  if (rows.length) {
+    var look = kzwB24Match_(ss, rows);
+    look.forEach(function (q, idx) { if (q.found.length) { var f = q.found[0], x = by[f.key] || (by[f.key] = { qty: 0, deals: {}, name: f.name }); x.qty += rows[idx].qty; x.deals[rows[idx].deal] = 1; } });
+  }
+  var sh = ss.getSheetByName(KZW_ADV.RESERVE); if (!sh) { sh = ss.insertSheet(KZW_ADV.RESERVE, ss.getNumSheets()); sh.getRange(1, 1, 1, 5).setValues([['Ключ', 'Резерв, ед.', 'Сделок', 'Наименование', 'Обновлено']]).setFontWeight('bold').setBackground('#1f3864').setFontColor('#ffffff'); sh.setFrozenRows(1); try { sh.hideSheet(); } catch (e) {} }
+  if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 5).clearContent();
+  var out = Object.keys(by).map(function (k) { return [k, by[k].qty, Object.keys(by[k].deals).length, by[k].name, new Date()]; });
+  if (out.length) sh.getRange(2, 1, out.length, 5).setValues(out);
+  PropertiesService.getScriptProperties().setProperty('KZW_RESERVE_AT', kzwDateTimeStr_(new Date()));
+  return { n: out.length, deals: deals.length, rows: rows.length };
+}
+function kzwReserveRefresh(token) { kzwAuth_(token, 'wizard'); return kzwReserveRefresh_(kzwSs_()); }
+function kzwReserve_(ss) { var sh = ss.getSheetByName(KZW_ADV.RESERVE), m = {}; if (!sh || sh.getLastRow() < 2) return m; sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues().forEach(function (r) { if (r[0]) m[String(r[0])] = { qty: kzwNum_(r[1]), deals: kzwNum_(r[2]) }; }); return m; }
+/** Сопоставление названий/кодов с позициями (общее для вкладки сделки и резерва). */
+function kzwB24Match_(ss, rows) { return kzwB24Lookup('__internal__', rows, ss); }
+/** Наборы ТО: лист «Наборы» [Набор, Ключ/артикул, Кол-во]. Загрузка CSV (разделитель ; , или таб). */
+function kzwUploadSets(token, text, mode) {
+  kzwAuth_(token, 'wizard');
+  var ss = kzwSs_(), lines = String(text || '').replace(/^﻿/, '').split(/\r?\n/).filter(function (l) { return l.trim(); });
+  if (!lines.length) throw new Error('Пустой файл');
+  var sep = (typeof detectSeparator_ === 'function') ? null : null; sep = lines[0].indexOf('\t') !== -1 ? '\t' : (lines[0].split(';').length >= lines[0].split(',').length ? ';' : ',');
+  var rows = [];
+  lines.forEach(function (l, i) { var c = l.split(sep).map(function (x) { return x.trim().replace(/^"|"$/g, ''); }); if (i === 0 && /набор|set|kit/i.test(c[0]) && !/\d/.test(c[2] || '')) return; if (c[0] && c[1]) rows.push([c[0], c[1], kzwNum_(c[2]) || 1]); });
+  if (!rows.length) throw new Error('Не найдено строк вида «Набор;Ключ или артикул;Кол-во»');
+  var sh = ss.getSheetByName(KZW_ADV.SETS); if (!sh) { sh = ss.insertSheet(KZW_ADV.SETS, ss.getNumSheets()); sh.getRange(1, 1, 1, 3).setValues([['Набор', 'Ключ / артикул', 'Кол-во']]).setFontWeight('bold').setBackground('#1f3864').setFontColor('#ffffff'); sh.setFrozenRows(1); }
+  if (mode !== 'append' && sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, 3).clearContent();
+  var last = Math.max(sh.getLastRow(), 1); sh.getRange(last + 1, 1, rows.length, 3).setValues(rows);
+  return { rows: rows.length, sets: Object.keys(rows.reduce(function (m, r) { m[r[0]] = 1; return m; }, {})).length };
+}
+function kzwSets_(ss) { var sh = ss.getSheetByName(KZW_ADV.SETS), m = {}; if (!sh || sh.getLastRow() < 2) return m; sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues().forEach(function (r) { if (r[0] && r[1]) (m[String(r[0])] = m[String(r[0])] || []).push({ ref: String(r[1]), qty: kzwNum_(r[2]) || 1 }); }); return m; }
+/** Автозакрытие заказов: «отправлен поставщику» → «получен», если по каждой строке остаток вырос не меньше чем на половину заказанного с момента заказа. */
+function kzwOrdersAutoClose_(ss, items) {
+  var ws = kzwOrdSheet_(ss, false); if (!ws || ws.getLastRow() < 2) return 0;
+  var sn = ss.getSheetByName(KZW_SNAP.SHEET); if (!sn || sn.getLastRow() < 2) return 0;
+  var v = sn.getRange(2, 1, sn.getLastRow() - 1, 3).getValues(), byDate = {};
+  v.forEach(function (r) { var d = r[0] instanceof Date ? kzwDateStr_(r[0]) : String(r[0]); (byDate[d] = byDate[d] || {})[String(r[1])] = kzwNum_(r[2]); });
+  var dates = Object.keys(byDate).sort(); if (dates.length < 2) return 0;
+  var prev = byDate[dates[dates.length - 2]], now = {}; items.forEach(function (a) { now[a[0]] = a[6]; });
+  var rng = ws.getRange(2, 1, ws.getLastRow() - 1, 20), rows = rng.getValues(), byId = {};
+  rows.forEach(function (r, i) { var id = String(r[0]).trim(); if (!id || r[2] !== 'отправлен поставщику') return; (byId[id] = byId[id] || []).push(i); });
+  var closed = 0;
+  Object.keys(byId).forEach(function (id) {
+    var ok = byId[id].every(function (i) { var k = String(rows[i][5]), q = kzwNum_(rows[i][11]); return (now[k] || 0) - (prev[k] || 0) >= Math.max(0.5 * q, 0.5); });
+    if (ok) { byId[id].forEach(function (i) { rows[i][2] = 'получен'; rows[i][4] = new Date(); rows[i][19] = (rows[i][19] ? rows[i][19] + ' · ' : '') + 'закрыт автоматически по приходу'; }); closed++; }
+  });
+  if (closed) rng.setValues(rows);
+  return closed;
+}
+function kzwItemsLite_(ss) {
+  var spr = {}, wsS = ss.getSheetByName(SH_SPR);
+  if (wsS && wsS.getLastRow() >= 2) { var cols = Math.min(wsS.getMaxColumns(), KZW_EXCL.COL), sv = wsS.getRange(2, 1, wsS.getLastRow() - 1, cols).getValues(); sv.forEach(function (r) { var k = kzwKey_(r[0]); if (k && !spr[k]) spr[k] = { crit: (r[KZW_CRIT.COL - 1] === '' || r[KZW_CRIT.COL - 1] === undefined || r[KZW_CRIT.COL - 1] === null) ? null : kzwNum_(r[KZW_CRIT.COL - 1]), excl: String(r[KZW_EXCL.COL - 1] == null ? '' : r[KZW_EXCL.COL - 1]).trim() }; }); }
+  var wsO = kzwSheet_(ss, SH_OST), lr = wsO.getLastRow(), items = []; if (lr < 2) return items;
+  var v = wsO.getRange(2, 1, lr - 1, OST_COLS).getValues();
+  for (var i = 0; i < v.length; i++) { var r = v[i]; if (r[0] === '' || r[0] === null) continue; var k = kzwKey_(r[0]), sp = spr[k] || { crit: null, excl: '' };
+    items.push({ key: k, art: kzwKey_(r[C_ART - 1]), name: String(r[C_NAME - 1] || ''), brand: String(r[C_BRAND - 1] || '') || 'Не определено', type: String(r[C_TYPE - 1] || ''), unit: String(r[C_UNIT - 1] || ''), tot: kzwNum_(r[C_TOTAL - 1]), min: (r[C_MIN - 1] === '' || r[C_MIN - 1] === null) ? null : kzwNum_(r[C_MIN - 1]), tgt: (r[C_TGT - 1] === '' || r[C_TGT - 1] === null) ? null : kzwNum_(r[C_TGT - 1]), crit: sp.crit, excl: sp.excl, price: Math.round(kzwNum_(r[C_PRICE - 1]) * 100) / 100, value: Math.round(kzwNum_(r[C_VALUE - 1]) * 100) / 100, old: kzwDateStr_(r[C_OLD - 1]), nw: kzwDateStr_(r[C_NEW - 1]), grp: String(r[C_GRP - 1] || '').trim(), stat: String(r[C_STAT - 1] || '') }); }
+  return items;
+}
+/**
+ * Советник: по каждой позиции — расход в день (по снимкам), класс ABC (по стоимости расхода, иначе по стоимости запаса) и XYZ
+ * (колебания расхода), срок поставки по бренду, «хватит дней», точка заказа, расчётный минимум, рекомендуемое количество
+ * с учётом «в пути» и резерва; плюс список рекомендаций (alerts) и неполные наборы.
+ */
+function kzwAdvisor(token) {
+  kzwAuth_(token);
+  var ss = kzwSs_(), A = kzwAdvSettings_(ss), items = kzwItemsLite_(ss), cons = kzwConsumption_(ss), reserve = A.reserveOn ? kzwReserve_(ss) : {}, sets = kzwSets_(ss);
+  var ord = kzwOrders('__internal__', ss), transit = {}, lateOrders = [], now = new Date(), today = kzwDateStr_(now), month = now.getMonth() + 1;
+  var leadOf = function (brand) { var l = A.lead && A.lead[brand]; return l === undefined || l === null || l === '' ? kzwNum_(A.leadDefault) || 30 : kzwNum_(l); };
+  ord.orders.forEach(function (o) { if (o.status === 'согласован' || o.status === 'отправлен поставщику') { o.lines.forEach(function (l) { transit[l.key] = (transit[l.key] || 0) + l.qty; }); var age = (now - new Date(o.updated || o.created)) / 86400000, maxLead = Math.max.apply(null, o.lines.map(function (l) { return leadOf(l.brand); }).concat([0])); if (o.status === 'отправлен поставщику' && age > maxLead + 14) lateOrders.push({ id: o.id, name: o.name, days: Math.round(age), n: o.n }); } });
+  var byKey = {}, byArt = {}; items.forEach(function (it) { byKey[it.key] = it; if (it.art) byArt[it.art.toUpperCase()] = it; });
+  // группы замен: суммарный остаток
+  var grpTot = {}; items.forEach(function (it) { if (it.grp) grpTot[it.grp] = (grpTot[it.grp] || 0) + it.tot; });
+  var basisOk = cons.loads >= 2 && cons.days >= (kzwNum_(A.minDays) || 14);
+  items.forEach(function (it) {
+    var c = cons.keys[it.key], rate = null, cv = null;
+    if (basisOk && c && c.n >= 2 && c.d >= 7) { rate = c.c / c.d; if (c.iv.length >= 4) { var rates = c.iv.map(function (x) { return x[0] > 0 ? x[1] / x[0] : 0; }), mean = rates.reduce(function (a, b) { return a + b; }, 0) / rates.length; if (mean > 0) { var sd = Math.sqrt(rates.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / rates.length); cv = Math.round(sd / mean * 100) / 100; } } }
+    it.rate = rate; it.consumed = c ? c.c : null; it.cv = cv; it.lead = leadOf(it.brand);
+    var seas = A.season && A.season[it.type] && A.season[it.type][month - 1]; it.season = seas ? kzwNum_(seas) || 1 : 1;
+    it.transit = transit[it.key] || 0; it.reserve = reserve[it.key] ? reserve[it.key].qty : 0;
+    it.avail = Math.round((it.tot + it.transit - it.reserve) * 1000) / 1000;
+    it.days = rate ? (it.avail <= 0 ? 0 : Math.round(it.avail / rate)) : null;
+    it.rop = rate ? Math.ceil(rate * it.lead * (1 + kzwNum_(A.safetyPct) / 100) * it.season) : null;   // точка заказа = расчётный минимум
+    it.autoMin = it.rop;
+    var need = rate ? Math.ceil(rate * (it.lead + kzwNum_(A.cyclDays)) * it.season) - it.avail : ((it.tgt !== null ? it.tgt : (it.min !== null ? it.min : 0)) - it.avail);
+    it.recQty = Math.max(0, Math.ceil(need * 1000) / 1000);
+    it.deadDays = it.nw ? Math.round((now - new Date(it.nw)) / 86400000) : null;
+    it.dead = !it.excl && it.tot > 0 && ((rate !== null && it.consumed === 0 && (c ? c.d : 0) >= Math.min(180, kzwNum_(A.deadDays))) || (rate === null && it.deadDays !== null && it.deadDays >= kzwNum_(A.deadDays)));
+    it.cls = String(it.stat || '').indexOf('КРАСНЫЙ') === 0 ? 'red' : (String(it.stat || '').indexOf('ЖЁЛТЫЙ') === 0 ? 'yel' : (it.excl ? 'exc' : (it.min === null ? 'none' : 'grn')));
+  });
+  // ABC
+  var useCons = basisOk && items.some(function (it) { return it.consumed > 0; });
+  var ranked = items.filter(function (it) { return !it.excl; }).map(function (it) { return { it: it, w: useCons ? (it.consumed || 0) * it.price : it.value }; }).sort(function (a, b) { return b.w - a.w; });
+  var totalW = ranked.reduce(function (a, x) { return a + x.w; }, 0), acc = 0;
+  ranked.forEach(function (x) { acc += x.w; var sh = totalW ? acc / totalW * 100 : 100; x.it.abc = x.w <= 0 ? 'C' : (sh <= kzwNum_(A.abcA) ? 'A' : (sh <= kzwNum_(A.abcB) ? 'B' : 'C')); });
+  items.forEach(function (it) { if (!it.abc) it.abc = it.excl ? '—' : 'C'; it.xyz = it.cv === null ? '—' : (it.cv < kzwNum_(A.xyzX) ? 'X' : (it.cv < kzwNum_(A.xyzY) ? 'Y' : 'Z')); it.grpTot = it.grp ? grpTot[it.grp] : null; });
+  // рекомендации
+  var alerts = [], K = String(A.alertClasses || 'AB'), isTop = function (it) { return K.indexOf(it.abc) !== -1; }, live = items.filter(function (it) { return !it.excl; });
+  var sumQ = function (arr) { return Math.round(arr.reduce(function (a, it) { return a + it.recQty * it.price; }, 0)); };
+  var orderNow = live.filter(function (it) { return it.rate && it.days !== null && it.days <= it.lead && isTop(it) && it.recQty > 0; });
+  var orderSoon = live.filter(function (it) { return it.rate && it.days !== null && it.days > it.lead && it.days <= it.lead + 14 && isTop(it) && it.recQty > 0; });
+  var redTop = live.filter(function (it) { return it.cls === 'red' && isTop(it) && !(it.grp && it.grpTot > (it.min || 0)) && it.transit <= 0; });
+  var noMin = live.filter(function (it) { return it.min === null && it.rate > 0; });
+  var minLow = live.filter(function (it) { return it.min !== null && it.autoMin !== null && isTop(it) && it.autoMin >= 2 * Math.max(it.min, 1) && it.autoMin - it.min >= 1; });
+  var minHigh = live.filter(function (it) { return it.min !== null && it.autoMin !== null && it.min >= 3 && it.autoMin <= it.min * 0.4; });
+  var reserveShort = live.filter(function (it) { return it.reserve > 0 && it.tot + it.transit < it.reserve; });
+  var dead = live.filter(function (it) { return it.dead; });
+  var push = function (id, level, title, text, keys, action) { alerts.push({ id: id, level: level, title: title, text: text, keys: (keys || []).slice(0, 300), n: keys ? keys.length : 0, action: action || '' }); };
+  if (!basisOk) push('basis', 'info', 'Расход пока не оценён', 'Снимков остатков: ' + cons.loads + (cons.days ? ' за ' + cons.days + ' дн.' : '') + '. Расход, «хватит дней» и расчётные минимумы появятся после нескольких загрузок 1С (не меньше двух с разницей ≥ ' + (kzwNum_(A.minDays) || 14) + ' дней). Пока советы строятся по минимумам и стоимости запаса.');
+  else if (cons.days < 60) push('basis', 'info', 'Оценка расхода ещё грубая', 'История: ' + cons.loads + ' загрузок за ' + cons.days + ' дн. (' + cons.from + ' – ' + cons.to + '). Точность вырастет после 2–3 месяцев регулярных загрузок.');
+  if (orderNow.length) push('order_now', 'red', 'Заказать на этой неделе: ' + orderNow.length + ' поз. (' + K.split('').join('/') + '-класс)', 'Остатка с учётом «в пути» и резерва хватит меньше, чем на срок поставки. Сумма по рекомендуемому количеству ≈ ' + sumQ(orderNow).toLocaleString('ru-RU') + ' BYN.', orderNow.map(function (it) { return it.key; }), 'order');
+  if (orderSoon.length) push('order_soon', 'yel', 'Точка заказа через 1–2 недели: ' + orderSoon.length + ' поз.', 'Запас закончится через срок поставки + до 14 дней. Удобно объединить с текущим заказом поставщику.', orderSoon.map(function (it) { return it.key; }), 'order');
+  if (redTop.length) push('red_top', 'red', 'КРАСНЫЕ позиции ' + K.split('').join('/') + '-класса без заказа: ' + redTop.length, 'Важные позиции (по расходу или стоимости) уже в красной зоне, группа замен не покрывает, в пути ничего нет.', redTop.map(function (it) { return it.key; }), 'order');
+  if (reserveShort.length) push('reserve', 'red', 'Не хватает под открытые сделки Битрикс24: ' + reserveShort.length + ' поз.', 'Товары в открытых сделках превышают остаток + в пути. Проверьте сроки сделок и закажите.', reserveShort.map(function (it) { return it.key; }), 'order');
+  if (noMin.length) push('nomin', 'yel', 'Есть расход, но нет минимума: ' + noMin.length + ' поз.', 'Позиции расходуются, а светофор их не контролирует. Можно принять расчётные минимумы одной кнопкой.', noMin.map(function (it) { return it.key; }), 'automin');
+  if (minLow.length) push('min_low', 'yel', 'Минимум занижен: ' + minLow.length + ' поз.', 'Расчётный минимум (расход × срок поставки × страховой запас) вдвое и более выше заданного — позиции попадут в красную зону слишком поздно.', minLow.map(function (it) { return it.key; }), 'automin');
+  if (minHigh.length) push('min_high', 'info', 'Минимум, вероятно, завышен: ' + minHigh.length + ' поз.', 'Заданный минимум больше расчётного в 2,5 раза и более — лишние деньги в запасе. Проверьте перед снижением.', minHigh.map(function (it) { return it.key; }), 'automin');
+  if (lateOrders.length) push('late', 'yel', 'Заказы дольше срока поставки: ' + lateOrders.length, lateOrders.slice(0, 5).map(function (o) { return o.id + (o.name ? ' «' + o.name + '»' : '') + ' — ' + o.days + ' дн., позиций ' + o.n; }).join('; ') + '. Уточните у поставщика или закройте заказ.', [], 'orders');
+  if (dead.length) push('dead', 'info', 'Залежалый запас: ' + dead.length + ' поз. на ' + Math.round(dead.reduce(function (a, it) { return a + it.value; }, 0)).toLocaleString('ru-RU') + ' BYN', 'Без движения дольше ' + kzwNum_(A.deadDays) + ' дней. Кандидаты в исключения, распродажу или возврат поставщику.', dead.map(function (it) { return it.key; }), 'dead');
+  // сезон: следующий месяц с коэффициентом > 1.2
+  Object.keys(A.season || {}).forEach(function (t) { var arr = A.season[t] || [], nxt = kzwNum_(arr[month % 12]); if (nxt >= 1.2) push('season_' + t, 'info', 'Сезон: ' + t + ' — в следующем месяце расход ×' + nxt, 'По сезонным коэффициентам спрос вырастет. Расчётные минимумы и количества уже учитывают текущий месяц; проверьте запас до пика.', live.filter(function (it) { return it.type === t && isTop(it); }).map(function (it) { return it.key; }), 'items'); });
+  // наборы
+  var setsOut = [];
+  Object.keys(sets).forEach(function (name) {
+    var parts = sets[name].map(function (p) { var it = byKey[p.ref] || byArt[p.ref.toUpperCase()]; return { ref: p.ref, qty: p.qty, key: it ? it.key : '', name: it ? it.name : '', tot: it ? it.tot : null, avail: it ? it.avail : null, ok: it ? it.avail >= p.qty : false }; });
+    var kits = parts.length ? Math.floor(Math.min.apply(null, parts.map(function (p) { return p.avail === null ? 0 : Math.floor(p.avail / p.qty); }))) : 0;
+    setsOut.push({ name: name, parts: parts, kits: kits, missing: parts.filter(function (p) { return !p.ok; }) });
+  });
+  var incomplete = setsOut.filter(function (s) { return s.missing.length; });
+  if (incomplete.length) push('sets', 'yel', 'Неполные наборы ТО: ' + incomplete.length + ' из ' + setsOut.length, incomplete.slice(0, 6).map(function (s) { return s.name + ' (нет: ' + s.missing.map(function (p) { return p.ref; }).join(', ') + ')'; }).join('; '), incomplete.reduce(function (a, s) { return a.concat(s.missing.filter(function (p) { return p.key; }).map(function (p) { return p.key; })); }, []), 'order');
+  var excludedWithStock = items.filter(function (it) { return it.excl && it.tot > 0; });
+  if (excludedWithStock.length) push('excl_stock', 'info', 'Исключённые позиции с остатком: ' + excludedWithStock.length + ' на ' + Math.round(excludedWithStock.reduce(function (a, it) { return a + it.value; }, 0)).toLocaleString('ru-RU') + ' BYN', 'Товар снят с производства / нерелевантен, но лежит на складе — распродажа или возврат.', excludedWithStock.map(function (it) { return it.key; }), 'excl');
+  var order = { red: 0, yel: 1, info: 2 }; alerts.sort(function (a, b) { return order[a.level] - order[b.level]; });
+  var cols = ['key', 'art', 'name', 'brand', 'type', 'unit', 'tot', 'min', 'tgt', 'crit', 'price', 'value', 'nw', 'grp', 'grpTot', 'stat', 'cls', 'excl', 'rate', 'consumed', 'cv', 'abc', 'xyz', 'lead', 'season', 'transit', 'reserve', 'avail', 'days', 'rop', 'autoMin', 'recQty', 'deadDays', 'dead'];
+  return { at: kzwDateTimeStr_(now), today: today, cols: cols, items: items.map(function (it) { return cols.map(function (c) { return it[c] === undefined ? null : it[c]; }); }), alerts: alerts, sets: setsOut, basis: { ok: basisOk, loads: cons.loads, days: cons.days, from: cons.from, to: cons.to, useCons: useCons }, settings: A, reserveAt: PropertiesService.getScriptProperties().getProperty('KZW_RESERVE_AT') || '', reserveOn: !!kzwB24Props_().hook, digestOn: PropertiesService.getScriptProperties().getProperty(KZW_ADV.DIGEST_FLAG) === '1', transitKeys: Object.keys(transit).length };
+}
+/** Еженедельная сводка Советника в Битрикс24 (триггер по понедельникам, 9:00) и ручной запуск. */
+function kzwAdvisorDigest() {
+  var b = kzwB24Props_(); if (!b.hook || !b.notify) return 'Битрикс24 не настроен';
+  var adv = kzwAdvisor('__internal__'), lines = ['[B]Советник — Контроль неснижаемого запаса[/B] (' + adv.at + ')'];
+  adv.alerts.filter(function (a) { return a.level !== 'info' || a.id === 'dead'; }).slice(0, 8).forEach(function (a) { lines.push((a.level === 'red' ? '🔴 ' : (a.level === 'yel' ? '🟡 ' : '• ')) + a.title); });
+  if (lines.length === 1) lines.push('Срочных рекомендаций нет.');
+  var url = kzwEdgeProps_().url; if (url) lines.push('Открыть Советник: ' + url + '/?tab=advisor');
+  var r = kzwB24Send_(lines.join('\n')); return 'Отправлено: ' + r.sent + (r.errors.length ? ' · ошибки: ' + r.errors.join('; ') : '');
+}
+function kzwAdvisorDigestNow(token) { kzwAuth_(token, 'wizard'); return kzwAdvisorDigest(); }
+function kzwAdvisorSchedule(token, on) {
+  kzwAuth_(token, 'wizard');
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === KZW_ADV.DIGEST_FN) ScriptApp.deleteTrigger(t); });
+  if (on) ScriptApp.newTrigger(KZW_ADV.DIGEST_FN).timeBased().onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(9).create();
+  PropertiesService.getScriptProperties().setProperty(KZW_ADV.DIGEST_FLAG, on ? '1' : '0');
+  return { on: !!on };
+}
+/** v2.0: принять расчётные минимумы — pairs [[ключ, мин.], …]; пишет столбец G «Справочника» по каждому ключу своё значение. */
+function kzwSetMinMany(token, pairs) {
+  kzwAuth_(token, 'wizard');
+  var ss = kzwSs_(), ws = kzwSheet_(ss, SH_SPR), last = ws.getLastRow(); if (last < 2 || !pairs || !pairs.length) return { changed: 0 };
+  var want = {}; pairs.forEach(function (p) { var v = kzwNum_(p[1]); if (p[0] && v >= 0) want[String(p[0])] = Math.round(v * 1000) / 1000; });
+  var colA = ws.getRange(2, 1, last - 1, 1).getValues(), rng = ws.getRange(2, 7, last - 1, 1), vals = rng.getValues(), changed = 0;
+  for (var i = 0; i < colA.length; i++) { var k = kzwKey_(colA[i][0]); if (k && want[k] !== undefined && String(vals[i][0]) !== String(want[k])) { vals[i][0] = want[k]; changed++; } }
+  if (changed) { rng.setValues(vals); SpreadsheetApp.flush(); }
+  return { changed: changed };
 }
