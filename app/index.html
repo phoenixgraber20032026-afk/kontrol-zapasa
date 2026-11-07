@@ -127,6 +127,18 @@
   body.alarm header{box-shadow:inset 0 -3px 0 #ff5a3c}
   body.offline header{filter:grayscale(.5)}
   body.offline .wiz-only,body.offline #itemSave,body.offline #grpSave{display:none !important}
+  /* v2.3: кольцо хода выполнения */
+  #progBox{position:fixed;right:16px;bottom:16px;z-index:9000;background:#fff;border:1px solid #d9e2ec;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);padding:12px 14px;display:none;align-items:center;gap:14px;min-width:300px;max-width:420px;animation:ain .25s}
+  #progBox.on{display:flex}#progBox .ring{flex:none}#progBox .pt{font-size:13px;color:var(--hdr);font-weight:bold}#progBox .ps{font-size:11.5px;color:#555;margin-top:2px}#progBox .steps{margin-top:5px;display:flex;flex-wrap:wrap;gap:4px}
+  #progBox .st{font-size:10.5px;border-radius:8px;padding:1px 7px;background:#eef1f5;color:#666}#progBox .st.done{background:#e6f4ea;color:#1e7e34}#progBox .st.cur{background:#1a73e8;color:#fff}
+  .ring{position:relative;width:76px;height:76px}.ring svg{width:76px;height:76px;transform:rotate(-90deg)}.ring .pc{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:15px;color:var(--hdr)}
+  .ring.sm,.ring.sm svg{width:44px;height:44px}.ring.sm .pc{font-size:10px}
+  .stbanner .ring{margin-right:6px}
+  /* v2.3: всплывающие подсказки */
+  #tip{position:fixed;z-index:9999;max-width:360px;background:#1f2a3a;color:#fff;font-size:12.5px;line-height:1.35;padding:8px 10px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.3);pointer-events:none;display:none;white-space:pre-line}
+  #tip b{color:#ffd54f}
+  #tip:after{content:"";position:absolute;left:14px;top:-6px;border:6px solid transparent;border-top:0;border-bottom-color:#1f2a3a}
+  #tip.up:after{top:auto;bottom:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#1f2a3a}
   /* v2.0: Советник */
   .adv-alert{border:1px solid #d9e2ec;border-left:6px solid #90a4b8;border-radius:8px;padding:10px 12px;margin:8px 0;background:#fff}
   .adv-alert.red{border-left-color:#d93025;background:#fff6f4}.adv-alert.yel{border-left-color:#e6a700;background:#fffbea}.adv-alert.info{border-left-color:#1a73e8;background:#f3f7fd}
@@ -222,7 +234,20 @@
   .login p{color:#555;font-size:13px}
   .login input{width:100%;margin:10px 0;text-align:center;font-size:16px}
   /* курсор ожидания: ключ крутит гайку (показывается на время обращений к таблице) */
+  .pvov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9500;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:30px 12px}
+  .pvbox{background:#fff;border-radius:12px;max-width:820px;width:100%;padding:18px 20px;box-shadow:0 12px 40px rgba(0,0,0,.35)}
+  .pvbox h3{margin:0 0 10px;color:var(--hdr)}
+  .pvrow{font-size:13px;line-height:1.6;margin-bottom:8px}
+  .pvrel{padding:9px 12px;border-radius:8px;font-size:13px;margin:8px 0;border:1px solid}
+  .pv-bad{background:#fdecea;border-color:#e57368;color:#8a1c12}.pv-ok{background:#e8f5e9;border-color:#7bc47f;color:#1b5e20}.pv-info{background:#eef3fb;border-color:#a9c1e8;color:#1f3b63}
+  .pvt{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0}.pvt td{padding:5px 8px;border-bottom:1px solid #e6ebf2}.pvt td:first-child{color:#555;width:46%}
+  .pvd{margin:6px 0;font-size:12.5px}.pvd summary{cursor:pointer;color:var(--hdr);font-weight:600}.pvd ul{margin:4px 0 4px 18px;padding:0}.pvd li{margin:2px 0}
+  .pvwarn{background:#fff8e1;border:1px solid #f0d98a;border-radius:8px;padding:8px 10px;font-size:12.5px;margin-top:8px}
+  select option, select optgroup{color:#1b2430 !important;background:#fff !important}
   body.busy, body.busy *{cursor:none !important}
+  body.busy-sys, body.busy-sys *{cursor:progress !important}
+  body.busy-sys #busyCursor{display:none !important}
+  #busyCursor.sp *{transform-box:fill-box}
   @media (pointer:coarse){body.busy, body.busy *{cursor:progress !important}}
   #busyCursor{position:fixed;left:0;top:0;width:72px;height:72px;margin:-36px 0 0 -36px;pointer-events:none;z-index:10000;display:none;overflow:visible;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
   body.busy #busyCursor{display:block}
@@ -234,6 +259,19 @@
   .whchip.all.on{background:#27AE60;border-color:#27AE60}
   .whchip.out{border-style:dashed}
   .whstrip .hint{margin-left:auto}
+  .whchip.mode{background:#fff8e1;border-color:#e6c200;color:#7a5c00}.whchip.mode.on{background:#f0b400;border-color:#f0b400;color:#222}
+  .whchip small{opacity:.75;font-size:10.5px;margin-left:4px}
+  /* v2.1: учёт по складам — карточки и переключатели */
+  .whcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+  .whcard{background:#fff;border:1px solid #d9e2ec;border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+  .whcard.off{background:#f6f6f6;border-style:dashed}.whcard.warn{border-color:#e6a700;box-shadow:0 0 0 2px #fff3cd inset}
+  .whcard .h{display:flex;align-items:center;gap:8px}.whcard .h b{font-size:14px;color:var(--hdr);flex:1}.whcard .h .q{font-size:18px;font-weight:bold;color:var(--hdr)}
+  .whcard .sub{font-size:11.5px;color:#666}.whcard .w{padding:5px 8px;border-radius:6px;background:#f4f7fb;font-size:12px}
+  .whcard .w .nm{font-weight:600;color:#333;margin-bottom:3px}.whcard .w .ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.whcard .w .ctl .hint{white-space:nowrap}.whcard .w.off{background:#f1f1f1;color:#777}.whcard .w.off .nm{color:#777;text-decoration:line-through}.whcard .w.chg{background:#fff3cd}
+  .whcard .w select{padding:1px 3px;font-size:11px;margin-left:auto;max-width:170px}
+  .whcard .al{font-size:11.5px;color:#8a6d00;background:#fff8e1;border-radius:6px;padding:4px 6px}
+  .sw{position:relative;display:inline-block;width:34px;height:18px;flex:none}.sw input{opacity:0;width:0;height:0}.sw i{position:absolute;inset:0;background:#c6ccd3;border-radius:18px;cursor:pointer;transition:.15s}.sw i:before{content:"";position:absolute;width:14px;height:14px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.15s}
+  .sw input:checked+i{background:#27AE60}.sw input:checked+i:before{transform:translateX(16px)}.sw input:disabled+i{cursor:default;opacity:.6}
   .whbar span.sel{outline:2px solid var(--acc)}
   .loader{position:fixed;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#1a73e8,#8ab4f8,#1a73e8);background-size:200%;animation:ld 1s linear infinite;display:none;z-index:99}
   .loader.on{display:block}
@@ -302,9 +340,11 @@
       <div class="actions"><button class="primary" id="apiSave">Проверить и сохранить</button></div>
     </div>
   </div>
-  <p class="hint" style="margin-top:14px;opacity:.6">Контроль неснижаемого запаса · v2.0 · <span id="modeLabel"></span></p>
+  <p class="hint" style="margin-top:14px;opacity:.6">Контроль неснижаемого запаса · v2.3 · <span id="modeLabel"></span></p>
 </div>
 
+<div id="tip"></div>
+<div id="progBox"><div class="ring" id="progRing"></div><div style="flex:1;min-width:0"><div class="pt" id="progTitle"></div><div class="ps" id="progSub"></div><div class="steps" id="progSteps"></div></div></div>
 <!-- ПРИЛОЖЕНИЕ -->
 <div id="app" style="display:none">
 <header>
@@ -312,6 +352,7 @@
   <div class="tabs" id="tabs" title="WIZARD: перетащите кнопку, чтобы поменять порядок"></div>
   <span class="badge" id="roleBadge"></span>
   <span class="fsbox" title="Размер шрифта"><button class="linkbtn" id="fsMinus">A−</button><span id="fsVal">100%</span><button class="linkbtn" id="fsPlus">A+</button></span>
+  <select id="curSel" class="linkbtn" style="padding:3px 4px;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:6px;font-size:12px" title="Вид курсора мыши в программе (запоминается на этом устройстве)"><option value="">🖱 Курсор: обычный</option><option value="big">Крупный</option><option value="black">Чёрный</option><option value="white">Белый</option><option value="blue">Синий</option><option value="orange">Оранжевый</option><option value="green">Зелёный</option><option value="bigblue">Крупный синий</option><option value="bigorange">Крупный оранжевый</option></select><select id="busySel" class="linkbtn" style="padding:3px 4px;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.5);border-radius:6px;font-size:12px" title="Вид курсора на время выполнения работы"><option value="wrench">⏳ Работа: ключ и гайка</option><option value="ring">Кольцо</option><option value="gear">Шестерёнка</option><option value="hourglass">Песочные часы</option><option value="dots">Три точки</option><option value="pulse">Пульс</option><option value="radar">Радар</option><option value="orbit">Спутник</option><option value="bars">Столбики</option><option value="sys">Системный (как в Windows)</option></select>
   <button class="linkbtn alertbtn" id="alertBtn" style="display:none" title="Критические остатки — открыть список">🔴 0</button>
   <button class="linkbtn alertbtn" id="advBtn" style="display:none" title="Советник — рекомендации по заказу и остаткам">💡 0</button>
   <button class="linkbtn" id="soundBtn" title="Звуковое предупреждение о новых критических остатках: вкл / выкл">🔔</button>
@@ -350,7 +391,6 @@
         <select id="iType"><option value="">Все типы</option></select>
         <select id="iBrand"><option value="">Все бренды</option></select>
         <select id="iStat"><option value="">Все статусы</option><option value="red">КРАСНЫЙ</option><option value="yel">ЖЁЛТЫЙ</option><option value="grn">ОК</option><option value="none">мин. не задан</option><option value="exc">исключённые</option></select>
-        <select id="iWh"><option value="">Остаток где угодно</option></select>
         <select id="iGrp"><option value="">Все группы замен</option><option value="__any">только в группах</option><option value="__no">без группы</option></select>
         <label class="hint"><input type="checkbox" id="iStock"> только с остатком</label>
         <button class="secondary" id="iReset">Сбросить</button>
@@ -497,9 +537,15 @@
       <div class="agrid" id="wGrid"></div>
     </div>
     <div class="panel" id="whMap">
-      <h3 style="margin:0 0 6px;color:var(--hdr)">Склады 1С → колонки контроля</h3>
-      <p class="hint">Таблица из листа «Настройки». WIZARD может изменить колонку контроля и признак «Учитывать»; изменения вступают в силу после «Обновить отчёты».</p>
-      <div class="tablewrap" style="max-height:420px"><table class="grid rep" id="whMapTable"></table></div>
+      <div class="toolbar">
+        <h3 style="margin:0;color:var(--hdr)">⚙ Учёт по складам</h3>
+        <span class="hint" id="whMapInfo" style="margin-left:auto"></span>
+        <button class="secondary" id="whCheck" title="Проверить связь «Настройки → пересборка → Остатки» по каждому складу">🔍 Проверить связи</button>
+        <button class="primary wiz-only" id="whApply" style="display:none" disabled title="Записать изменения в лист «Настройки» и запустить пересборку отчётов — только после неё склад появится в «Остатках»">💾 Применить и пересобрать</button>
+      </div>
+      <p class="hint">Каждая карточка — колонка контроля (так склады видны во всех вкладках). Внутри — склады 1С, которые в неё попадают: переключатель «учитывать» решает, входит ли склад в учёт (выключен — его остаток уходит в «Вне контроля»); список позволяет перенести склад в другую колонку. Клик по названию карточки — учёт по этому складу во всём приложении. <b>Изменения записываются в лист «Настройки» и вступают в силу только после пересборки отчётов</b> — кнопка «Применить и пересобрать» делает и то и другое.</p>
+      <div class="msg" id="whMapMsg"></div>
+      <div class="whcards" id="whCards"></div>
     </div>
   </section>
 
@@ -544,7 +590,8 @@
     <div class="agrid">
       <div class="panel" style="margin:0">
         <h3 style="margin:0 0 6px;color:var(--hdr)">Загрузить остатки из 1С</h3>
-        <p class="hint">Файл выгрузки 1С «Остатки по складам» (.xlsx / .xls, лист TDSheet: колонка C — «ТМЦ», G — «Кол-во остатков»). Файл конвертируется на Google Диске (нужна служба «Drive API» в проекте скрипта), строки попадают на лист «Данные 1С», затем автоматически запускается пересборка всех отчётов (1–5 минут, при нехватке времени продолжается сама).</p>
+        <p class="hint">Принимаются два вида отчётов 1С (.xlsx / .xls), вид распознаётся автоматически: <b>«Остатки по складам»</b> — плоская выгрузка (лист TDSheet, колонка C «ТМЦ», G «Кол-во остатков») и <b>«Остатки ТМЦ на складах»</b> — отчёт с группировкой ТМЦ → страна → партии (строка заголовков «ТМЦ.Страна | Ед. изм. | Контрагент | Партия | Склад | Кол-во | Стоимость»). Файл конвертируется на Google Диске (нужна служба «Drive API»).</p>
+        <div class="field" style="max-width:520px"><label title="Что делать с данными, которые уже лежат в «Данных 1С»">Режим загрузки</label><select id="upMode"><option value="auto">Авто: полный отчёт — заменить всё; частичный (с отбором) — обновить только позиции из файла</option><option value="replace">Заменить все данные (это полная выгрузка)</option><option value="merge">Обновить только позиции из файла, остальные сохранить (частичный отчёт)</option></select></div>
         <div class="drop" id="drop">Перетащите файл сюда или <u>выберите</u><br><span class="hint" id="dropName">файл не выбран</span></div>
         <input type="file" id="file1c" accept=".xlsx,.xls,.xlsm" style="display:none">
         <div class="actions" style="justify-content:flex-start"><button class="primary" id="uploadBtn" disabled>Загрузить и пересобрать</button><span class="hint" id="upInfo"></span></div>
@@ -681,8 +728,9 @@
         <p><b>Приоритет</b> 1/2/3 = красный/жёлтый/ОК — по нему сортируется «Критический запас». <b>Дефицит до минимума</b> = минимум − остаток (не меньше 0). <b>Остаток в контроле</b> — сумма по складам с признаком «Учитывать = Да»; «Вне контроля» — аренда, демо, разукомплектованное и т.п.</p></details>
       <details><summary>Дашборд</summary>
         <p>Показатели и графики считаются из листа «Остатки» по выбранным типу и бренду: число позиций по статусам, дефицит, стоимость и количество в контроле (стоимость = остаток × средняя цена из 1С), группы замен в красной/жёлтой зоне. Графики: структура статусов, статусы по типам, остатки и стоимость по колонкам контроля (складам), топ брендов по стоимости и по числу красных позиций, динамика по загрузкам (лист «История»). WIZARD: «✎ Макет» — переставить, переименовать, скрыть блоки и изменить ширину (сохраняется для всех).</p></details>
-      <details><summary>Выбор складов</summary>
-        <p>Полоса «Склады» под шапкой — фильтр остатков для всего приложения. «Все склады» — как в таблице (сумма складов в контроле). Нажмите один или несколько складов (и при желании «Вне контроля») — на всех вкладках остатки, стоимость, статусы, дефицит, критический запас, бренды, группы замен (в т.ч. покрытие группой), статистика по товару и поступления по месяцам пересчитываются только по выбранным складам; столбцы невыбранных складов скрываются в таблицах приложения и при просмотре листов книги (Остатки, вкладки брендов, Критический запас, Сводка). Минимальный / критический запас сравнивается с остатком на выбранных складах. Выбор запоминается в браузере. «История» и «Сводка» в самой таблице считаются по всем складам.</p></details>
+      <details><summary>Склад: учёт по складам (v2.1)</summary>
+        <p>Полоса «Склад» под шапкой — единственный выбор склада во всём приложении (отдельного фильтра на «Остатках» больше нет). Клик по складу — учёт ведётся по нему: остаток, стоимость, статусы светофора, дефицит, заказ и Советник считаются по этому складу; <b>показываются только позиции, которые на нём есть</b> — товар, лежащий на другом складе, не виден (переключатель «📦 только в наличии на складе» / «📋 все позиции»). Ctrl+клик — добавить ещё склад (учёт по нескольким складам вместе). «Все склады» — как в таблице. Выбор запоминается в этом браузере. Рядом с названием склада «0» означает, что в «Остатках» его колонка пустая.</p>
+        <p><b>Вкладка «Склады» → ⚙ Учёт по складам.</b> Карточка = колонка контроля; внутри — склады 1С, которые в неё попадают (лист «Настройки», таблица «Склад (как в 1С) → Колонка контроля → Учитывать»). Переключатель — учитывать склад или нет (выключен — остаток уходит в «Вне контроля»), список — перенести склад в другую колонку. Изменения вступают в силу <b>только после пересборки отчётов</b>: «💾 Применить и пересобрать» записывает настройки и запускает пересборку (1–5 минут), после неё приложение перечитывает данные само. «🔍 Проверить связи» сверяет настройки с «Остатками» и показывает, например: «склад учитывается, но колонка пустая — нужна пересборка».</p></details>
       <details><summary>Статистика по товару · поступления</summary>
         <p>Вкладка «Статистика» — поиск по встроенной базе (все позиции «Остатков»/«Справочника»: ключ, артикул, наименование, бренд). Клик по найденной позиции — карточка: остатки по складам, параметры контроля, <b>партии на складе</b> из выгрузки 1С (дата поступления, ТТН, поставщик, склад, количество, цена), графики поступлений по месяцам и цены по партиям, <b>динамика остатка по загрузкам</b> (приложение сохраняет снимок остатков при каждой новой выгрузке — лист «Снимки остатков»). Кнопка «Σ Сводно по найденным» считает то же по всем найденным позициям сразу — например по запросу «компрессор» или «сепаратор».</p>
         <p>На дашборде блоки «Поступления по месяцам» строятся по датам партий из «Данных 1С»: выгрузка «Остатки по складам» содержит только партии, которые ещё лежат на складе, поэтому это динамика поступлений <i>текущего</i> запаса (проданные партии в неё не попадают). При выборе бренда все блоки, включая поступления и таблицу «Оборудование / запчасти / масла», считаются по этому бренду.</p></details>
@@ -713,7 +761,8 @@
         <p>Лист «Группы замен»: ID, назначение, минимум группы, остаток группы (сумма позиций в контроле), статус группы (тот же светофор, но по минимуму группы). Клик — состав группы. WIZARD: изменить назначение, минимум и комментарий, добавить позицию (поиск по ключу/названию) или убрать из группы, создать новую группу; «Аналоги → Справочник» — перенести группы, набранные на листе «Аналоги». После изменений состава групп для «Состава групп» и «Критического запаса» нужна пересборка («Обновить отчёты»).</p></details>
       <details><summary>История</summary>
         <p>Снимки статистики на момент каждой загрузки / пересборки: позиций, с остатком, количество и стоимость в контроле, красных / жёлтых / ОК / без минимума, дефицит — раздельно по типам и всего. Графики — динамика статусов и стоимости.</p></details>
-      <details><summary>Загрузка 1С (WIZARD)</summary>
+      <details><summary>Загрузка 1С (WIZARD) · два вида отчётов (v2.2)</summary>
+        <p><b>Распознаются два отчёта 1С.</b> «Остатки по складам» — плоская выгрузка (TDSheet: счёт, склад, ТМЦ, ед., партия, контрагент, кол-во, цена, всего, дата партии). «Остатки ТМЦ на складах» — отчёт с группировкой: строка ТМЦ (с единицей измерения) → строка страны → строки партий (контрагент, партия, склад, кол-во, стоимость); программа разворачивает его в те же 13 колонок «Данных 1С»: цена = стоимость ÷ кол-во, дата партии — из текста «… от дд.мм.гггг г.», уровни папок/брендов над ТМЦ пропускаются, отрицательные партии (сторно) сохраняются, партии без количества не берутся. Если в отчёте стоит отбор (например, ТМЦ.Страна = Китай) и позиций в нём заметно меньше, чем уже есть в «Данных 1С», режим «Авто» делает <b>частичное обновление</b>: строки позиций из файла заменяются, остальные сохраняются. Режим можно задать явно перед загрузкой.</p>
         <p>Выберите файл выгрузки «Остатки по складам» → «Загрузить и пересобрать»: файл уходит на Google Диск, конвертируется, строки записываются на «Данные 1С», дата и имя файла — в «Настройки», и в фоне запускается пересборка (стадии: ядро → вкладки брендов → отчёты → предложения аналогов). Ход виден в блоке «Состояние» и в баннере сверху; при нехватке времени скрипт сам продолжает через ~1 минуту. «Обновить отчёты» — пересборка без новой выгрузки; «Продолжить прерванную» / «Сбросить состояние» — как в меню таблицы. «Параметры контроля» — порог жёлтой зоны и минимум по умолчанию.</p></details>
       <details><summary>Сверка (дубли артикулов и наименований)</summary>
         <p>Программа сравнивает все позиции «Остатков» между собой: одинаковый артикул у разных ключей, одинаковое наименование, артикул одной позиции внутри наименования другой, очень похожие наименования одного бренда. Найденные связки показываются карточками; WIZARD отмечает <b>«Это идентичный товар»</b> — позиции объединяются в группу замен (общий остаток по складам, лист «Группы замен» / «Аналоги» / «Справочник» I) — или <b>«Это разные товары»</b> — позиции остаются раздельно, связка больше не предлагается (если до этого были объединены сверкой — разъединяются). В карточке можно снять галочки с лишних позиций перед объединением; состав получившейся группы потом правится на вкладке «Группы замен» (добавить / убрать позицию). Решения хранятся на листе «Сверка»; «⟳ Пересчитать сверку» — заново после загрузки 1С.</p></details>
@@ -981,7 +1030,7 @@
   function whOutOn() { return !whActive() || S.whSel.indexOf(-1) !== -1; }
   function whSelNames() { return S.whSel.map(function (i) { return i === -1 ? S.boot.whOut : S.whNames[i]; }); }
   function whLabel() { return whActive() ? whSelNames().join(' + ') : 'все склады в контроле'; }
-  function totLabel() { return whActive() ? 'Остаток на выбранных складах' : 'Итого в контроле'; }
+  function totLabel() { return whActive() ? (S.whSel.length === 1 ? 'Остаток на складе' : 'Остаток на выбранных складах') : 'Итого в контроле'; }
   /** Пересчитать остаток / стоимость позиций по выбранным складам, затем статусы и покрытие группами. */
   function applyWhSel() {
     var act = whActive();
@@ -992,22 +1041,37 @@
     });
     deriveCoverage();
   }
+  /** Единицы и позиции по каждой колонке контроля (по всем позициям, без фильтров) — для подписей чипов и карточек складов. */
+  function whTotals() {
+    var t = S.whNames.map(function () { return { q: 0, n: 0, v: 0 }; }), out = { q: 0, n: 0, v: 0 };
+    S.items.forEach(function (it) { it.wh.forEach(function (x, i) { if (x > 0 && t[i]) { t[i].q += x; t[i].n++; t[i].v += x * (it.price || 0); } }); if (it.out > 0) { out.q += it.out; out.n++; out.v += it.out * (it.price || 0); } });
+    return { cols: t, out: out };
+  }
   function renderWhStrip() {
     var el = $('whStrip'); if (!S.boot) return;
-    var chips = '<span class="whchip all' + (whActive() ? '' : ' on') + '" data-wh="all">Все склады</span>' + S.whNames.map(function (w, i) { return '<span class="whchip' + (S.whSel.indexOf(i) !== -1 ? ' on' : '') + '" data-wh="' + i + '">' + esc(w) + '</span>'; }).join('') +
-      '<span class="whchip out' + (S.whSel.indexOf(-1) !== -1 ? ' on' : '') + '" data-wh="-1" title="Склады с «Учитывать в контроле = Нет» (аренда, демо, разукомплектовано…)">' + esc(S.boot.whOut) + '</span>';
+    var T = whTotals();
+    var chip = function (i, w, tt) { var on = S.whSel.indexOf(i) !== -1, z = tt.q <= 0; return '<span class="whchip' + (i === -1 ? ' out' : '') + (on ? ' on' : '') + '" data-wh="' + i + '" title="' + esc(w) + ': ' + fmtQ(tt.q) + ' ед. · ' + tt.n + ' поз.' + (z ? ' — в «Остатках» пусто (склад не учитывается или не было пересборки — см. вкладку «Склады»)' : '') + '\nКлик — только этот склад; Ctrl+клик — добавить к выбранным">' + esc(w) + (z ? ' <small>0</small>' : '') + '</span>'; };
+    var chips = '<span class="whchip all' + (whActive() ? '' : ' on') + '" data-wh="all" title="Все склады в контроле — как в таблице">Все склады</span>' + S.whNames.map(function (w, i) { return chip(i, w, T.cols[i]); }).join('') + chip(-1, S.boot.whOut, T.out);
     var V = vis(), t = sum(V, 'tot'), nx = (S.excluded || []).length;
+    var mode = whActive() ? '<span class="whchip mode' + (S.whOnly ? ' on' : '') + '" data-only="1" style="margin-left:10px" title="Включено: показываются только позиции, которые есть на выбранном складе (товар с других складов не виден). Выключено: все позиции, остаток считается по выбранному складу">' + (S.whOnly ? '📦 только в наличии на складе' : '📋 все позиции') + '</span>' : '';
     var xchip = nx ? '<span class="whchip out' + (S.hideExcl ? ' on' : '') + '" data-excl="1" style="margin-left:10px" title="Исключённые (снятые с производства / нерелевантные) позиции: ' + nx + '. Включено — они не показываются в остатках, брендах и показателях">' + (S.hideExcl ? '⊘ без исключённых (' + nx + ')' : '⊘ показаны исключённые (' + nx + ')') + '</span>' : '';
-    el.innerHTML = '<b>Склады:</b>' + chips + xchip + '<span class="hint">' + (whActive() ? 'остатки по: ' + esc(whLabel()) + ' · ' : '') + fmtQ(t) + ' ед. · ' + fmtN(sum(V, 'value')) + ' BYN</span>';
+    el.innerHTML = '<b>' + (whActive() ? 'Учёт по складу:' : 'Склад:') + '</b>' + chips + mode + xchip + '<span class="hint">' + (whActive() ? esc(whLabel()) + ': ' : '') + V.length + ' поз. · ' + fmtQ(t) + ' ед. · ' + fmtN(sum(V, 'value')) + ' BYN</span>';
+  }
+  function setWhSel(sel) {
+    S.whSel = (sel || []).slice().sort(function (a, b) { return (a === -1 ? 99 : a) - (b === -1 ? 99 : b); });
+    try { localStorage.setItem('kzw_wh', JSON.stringify(S.whSel)); } catch (x) {}
+    applyWhSel(); renderWhStrip();
   }
   $('whStrip').addEventListener('click', function (e) {
     var x = e.target.closest('[data-excl]');
     if (x) { S.hideExcl = !S.hideExcl; try { localStorage.setItem('kzw_hideexcl', S.hideExcl ? '1' : '0'); } catch (ex) {} withBusy(function () { renderWhStrip(); renderAll(); }); return; }
+    var o = e.target.closest('[data-only]');
+    if (o) { S.whOnly = !S.whOnly; try { localStorage.setItem('kzw_whonly', S.whOnly ? '1' : '0'); } catch (ex2) {} withBusy(function () { renderWhStrip(); renderAll(); }); return; }
     var c = e.target.closest('[data-wh]'); if (!c) return;
-    if (c.dataset.wh === 'all') S.whSel = [];
-    else { var i = +c.dataset.wh, k = S.whSel.indexOf(i); if (k === -1) S.whSel.push(i); else S.whSel.splice(k, 1); S.whSel.sort(function (a, b) { return (a === -1 ? 99 : a) - (b === -1 ? 99 : b); }); }
-    try { localStorage.setItem('kzw_wh', JSON.stringify(S.whSel)); } catch (x) {}
-    withBusy(function () { applyWhSel(); renderWhStrip(); S.cache.sheets = S.cache.sheets || {}; renderAll(); if ($('view-sheets').style.display !== 'none' && $('sheetView').style.display !== 'none') loadSheet(false); });
+    var sel;
+    if (c.dataset.wh === 'all') sel = [];
+    else { var i = +c.dataset.wh, k = S.whSel.indexOf(i); if (e.ctrlKey || e.metaKey || e.shiftKey) { sel = S.whSel.slice(); if (k === -1) sel.push(i); else sel.splice(k, 1); } else sel = (k !== -1 && S.whSel.length === 1) ? [] : [i]; }
+    withBusy(function () { setWhSel(sel); S.cache.sheets = S.cache.sheets || {}; renderAll(); if ($('view-sheets').style.display !== 'none' && $('sheetView').style.display !== 'none') loadSheet(false); });
   });
   /** Собственный статус позиции (без учёта группы) — та же логика, что в формуле «Остатков». */
   function ownStatus(it) {
@@ -1048,7 +1112,11 @@
   }
   /** v1.6: позиции для показа — без исключённых, когда включён переключатель «без исключённых» (по умолчанию включён). */
   S.hideExcl = true; try { S.hideExcl = localStorage.getItem('kzw_hideexcl') !== '0'; } catch (e) {}
-  function vis() { return S.hideExcl ? S.items.filter(function (it) { return it.cls !== 'exc'; }) : S.items; }
+  // v2.1: при выбранном складе показываются только позиции, которые на нём есть (товар с другого склада не виден)
+  S.whOnly = true; try { S.whOnly = localStorage.getItem('kzw_whonly') !== '0'; } catch (e) {}
+  function onSelWh(it) { if (!whActive() || !S.whOnly) return true; for (var j = 0; j < S.whSel.length; j++) { var i = S.whSel[j]; if ((i === -1 ? it.out : it.wh[i]) > 0) return true; } return false; }
+  function vis() { return S.items.filter(function (it) { return (!S.hideExcl || it.cls !== 'exc') && onSelWh(it); }); }
+  function visAll() { return S.hideExcl ? S.items.filter(function (it) { return it.cls !== 'exc'; }) : S.items; }   // без фильтра по выбранному складу — для вкладки «Склады»
   function itemsBy(type, brand) { return vis().filter(function (it) { return (!type || it.type === type) && (!brand || it.brand === brand); }); }
   function statCounts(arr) { var c = { red: 0, yel: 0, grn: 0, none: 0, exc: 0, n: arr.length, withStock: 0, qty: 0, value: 0, def: 0, out: 0 }; arr.forEach(function (it) { c[it.cls]++; if (it.tot > 0) c.withStock++; c.qty += it.tot; c.value += it.value; c.def += it.def; c.out += it.out; }); return c; }
 
@@ -1131,9 +1199,10 @@
     S.cache = { sheets: {}, charts: {} }; S.arr = null; S.snapCache = {}; S.supMap = null; S.orders = null; S.adv = null;
     var btn = $('refreshBtn'), t0 = Date.now();
     if (!silent) { msg($('globalMsg'), 'Перечитываю данные из таблицы (обычно 3–8 секунд)…', 'info'); btn.disabled = true; btn.textContent = '⏳'; }
-    return call('kzwGetData', S.token).then(function (D) { applyData(D); fillFilters(); renderBanner(D.state); renderWhStrip(); renderAll(); checkAlerts(false); if (typeof advLoad === 'function') advLoad(true); if (S.boot) { S.boot.data = D; saveOffline(S.boot); } if (!silent) msg($('globalMsg'), 'Данные обновлены из таблицы за ' + Math.round((Date.now() - t0) / 100) / 10 + ' с: позиций ' + D.items.length + ', групп ' + D.groups.length + ' · данные 1С от ' + (fmtDate(D.settings.lastLoad) || '—'), 'ok'); })
-      .catch(function (e) { msg($('globalMsg'), 'Не удалось обновить: ' + e.message, 'err'); })
-      .then(function () { btn.disabled = false; btn.textContent = '⟳'; });
+    var ownProg = !PROG.on; if (ownProg) progStart('Обновление данных', ['Запрос к таблице', 'Получение пакета', 'Пересчёт и отрисовка'], [2, 6, 2]);
+    return call('kzwGetData', S.token).then(function (D) { if (ownProg) progStep(2); applyData(D); fillFilters(); renderBanner(D.state); renderWhStrip(); renderAll(); checkAlerts(false); if (typeof advLoad === 'function') advLoad(true); if (S.boot) { S.boot.data = D; saveOffline(S.boot); } if (!silent) msg($('globalMsg'), 'Данные обновлены из таблицы за ' + Math.round((Date.now() - t0) / 100) / 10 + ' с: позиций ' + D.items.length + ', групп ' + D.groups.length + ' · данные 1С от ' + (fmtDate(D.settings.lastLoad) || '—'), 'ok'); })
+      .catch(function (e) { msg($('globalMsg'), 'Не удалось обновить: ' + e.message, 'err'); if (ownProg) progDone('', e.message); })
+      .then(function () { btn.disabled = false; btn.textContent = '⟳'; if (ownProg && PROG.on && PROG.pct < 100) progDone('Данные обновлены'); });
   }
   function renderAll() {
     var v = currentView(), R = { dash: renderDash, advisor: renderAdvisor, items: renderItems, crit: renderCrit, wh: renderWh, brands: renderBrands, groups: renderGroups, hist: renderHist, load: renderLoad, order: renderOrder, excl: renderExcl };
@@ -1161,7 +1230,6 @@
     ['dType', 'iType', 'cType', 'wType', 'bType', 'oType', 'advType'].forEach(function (id) { fillSel($(id), S.types, 'Все типы', true); });
     ['dBrand', 'iBrand', 'cBrand', 'xBrand', 'advBrand'].forEach(function (id) { fillSel($(id), S.brands, 'Все бренды', true); });
     fillBrandMsel();
-    fillSel($('iWh'), S.whNames.concat([S.boot.whOut]), 'Остаток где угодно', true);
     var gsel = $('iGrp'), cur = gsel.value; gsel.innerHTML = '<option value="">Все группы замен</option><option value="__any">только в группах</option><option value="__no">без группы</option>' + S.groups.map(function (g) { return '<option value="' + esc(g.id) + '">' + esc(g.id + ' — ' + g.purpose) + '</option>'; }).join(''); gsel.value = cur;
     fillSel($('hType'), ['Всего'].concat(S.types), null, true);
   }
@@ -1170,8 +1238,8 @@
   function renderBanner(st) {
     var el = $('stateBanner'); if (!st) { el.innerHTML = ''; return; }
     var t = st.text || '';
-    var diag = (st.ageMin ? 'начата ' + st.ageMin + ' мин назад' : '') + (st.running ? ' · скрипт выполняется' : '') + (st.pending ? ' · ждёт запуска по триггеру' : '') + (st.hasTrigger ? ' · есть триггер продолжения' : '');
-    if (st.busy) el.innerHTML = '<div class="stbanner busy"><span class="spin"></span><b>Идёт пересборка отчётов</b><span>' + esc(t) + '</span><span class="hint">данные обновятся автоматически по завершении' + (diag ? ' · ' + esc(diag) : '') + '</span>' + (S.role === 'wizard' && (st.ageMin > 10 || st.pendAgeMin > 5) ? '<button class="danger" data-rb="reset" title="Если пересборка явно зависла">Сбросить состояние</button>' : '') + '</div>';
+    var diag = ((st.ageMin ? 'начата ' + st.ageMin + ' мин назад' : '') + (st.running ? ' · скрипт выполняется' : '') + (st.pending ? ' · ждёт запуска по триггеру' : '') + (st.hasTrigger ? ' · есть триггер продолжения' : '')).replace(/^(\s*·\s*)+/, '');
+    if (st.busy) el.innerHTML = '<div class="stbanner busy"><span class="ring sm">' + ringSvg(PROG.on && PROG.title === 'Пересборка отчётов' ? PROG.pct : 5, REBUILD_STEPS.length, 44, 6, REBUILD_W) + '</span><b>Идёт пересборка отчётов' + (PROG.on && PROG.title === 'Пересборка отчётов' ? ' · ' + Math.round(PROG.pct) + ' %' : '') + '</b><span>' + esc(t) + '</span><span class="hint">данные обновятся автоматически по завершении' + (PROG.on && PROG.title === 'Пересборка отчётов' ? ' · ' + esc(progEta()) : '') + (diag ? ' · ' + esc(diag) : '') + '</span>' + (S.role === 'wizard' && (st.ageMin > 10 || st.pendAgeMin > 5) ? '<button class="danger" data-rb="reset" title="Если пересборка явно зависла">Сбросить состояние</button>' : '') + '</div>';
     else if (st.stale) el.innerHTML = '<div class="stbanner err"><b>Пересборка прервана и не выполняется</b><span>' + esc(t) + (st.stage !== null && st.stage !== undefined ? ' · остановилась на стадии ' + (st.stage + 1) + ' из 4' : '') + (st.started ? ' · начата ' + esc(fmtDate(String(st.started).slice(0, 16).replace('T', ' ')) || st.started) : '') + '</span>' +
       (S.role === 'wizard' ? '<button class="primary" data-rb="resume">▶ Продолжить с этой стадии</button><button class="danger" data-rb="reset">Сбросить состояние</button><span class="hint">после сброса — «Обновить отчёты» заново</span>' : '<span class="hint">WIZARD может продолжить или сбросить её на вкладке «Загрузка 1С»</span>') + '</div>';
     else if (/^ОШИБКА/.test(t)) el.innerHTML = '<div class="stbanner err"><b>Последняя пересборка завершилась ошибкой</b><span>' + esc(t) + '</span>' + (S.role === 'wizard' ? '<button class="secondary" data-go="load">К загрузке</button>' : '') + '</div>';
@@ -1183,7 +1251,7 @@
   function stopPoll() { if (S.poll) clearInterval(S.poll); S.poll = null; }
   function pollStatus() {
     callQuiet('kzwStatus', S.token).then(function (st) {
-      S.lastState = st; renderBanner(st); if ($('view-load').style.display !== 'none') renderLoadState(st);
+      S.lastState = st; progRebuild(st); renderBanner(st); if ($('view-load').style.display !== 'none') renderLoadState(st);
       if (!st.busy) { stopPoll(); msg($('globalMsg'), /^ОШИБКА/.test(st.text || '') ? st.text : 'Пересборка завершена — данные перечитаны', /^ОШИБКА/.test(st.text || '') ? 'err' : 'ok'); refresh(true); }
     }).catch(function () {});
   }
@@ -1332,11 +1400,9 @@
   }
   function sortVal(it, c) { return c.wh !== undefined ? it.wh[c.wh] : it[c.k]; }
   function filteredItems() {
-    var q = $('iSearch').value.trim().toLowerCase(), type = $('iType').value, brand = $('iBrand').value, st = $('iStat').value, wh = $('iWh').value, grp = $('iGrp').value, stock = $('iStock').checked;
-    var whIdx = wh ? (wh === S.boot.whOut ? -1 : S.whNames.indexOf(wh)) : null;
-    return (st === 'exc' ? S.items : vis()).filter(function (it) {
+    var q = $('iSearch').value.trim().toLowerCase(), type = $('iType').value, brand = $('iBrand').value, st = $('iStat').value, grp = $('iGrp').value, stock = $('iStock').checked;
+    return (st === 'exc' ? S.items.filter(onSelWh) : vis()).filter(function (it) {
       if (type && it.type !== type) return false; if (brand && it.brand !== brand) return false; if (st && it.cls !== st) return false;
-      if (whIdx !== null) { var x = whIdx === -1 ? it.out : it.wh[whIdx]; if (!(x > 0)) return false; }
       if (grp === '__any' && !it.grp) return false; if (grp === '__no' && it.grp) return false; if (grp && grp.charAt(0) !== '_' && it.grp !== grp) return false;
       if (stock && !(it.tot > 0)) return false;
       if (q && it.search.indexOf(q) === -1) return false;
@@ -1366,9 +1432,9 @@
       var v = cellVal(it, c), cls = (c.n ? 'num' : '') + (c.cls ? ' ' + c.cls : '') + (c.st ? ' ' + it.cls : '') + (c.man && S.role === 'wizard' ? ' man' : '') + ((c.q && !(sortVal(it, c) > 0)) ? ' zero' : '');
       return '<td class="' + cls + '"' + (c.cls === 'k' ? ' title="' + v + '"' : '') + '>' + v + '</td>'; }).join('') + '</tr>';
   }
-  ['iSearch', 'iType', 'iBrand', 'iStat', 'iWh', 'iGrp', 'iStock'].forEach(function (id) { $(id).addEventListener(id === 'iSearch' ? 'input' : 'change', function () { renderItems(); }); });
+  ['iSearch', 'iType', 'iBrand', 'iStat', 'iGrp', 'iStock'].forEach(function (id) { $(id).addEventListener(id === 'iSearch' ? 'input' : 'change', function () { renderItems(); }); });
   $('iMore').addEventListener('click', function () { withBusy(function () { renderItems(true); }); });
-  $('iReset').addEventListener('click', function () { ['iSearch', 'iType', 'iBrand', 'iStat', 'iWh', 'iGrp'].forEach(function (id) { $(id).value = ''; }); $('iStock').checked = false; renderItems(); });
+  $('iReset').addEventListener('click', function () { ['iSearch', 'iType', 'iBrand', 'iStat', 'iGrp'].forEach(function (id) { $(id).value = ''; }); $('iStock').checked = false; renderItems(); });
   $('iTable').addEventListener('click', function (e) {
     var th = e.target.closest('th[data-k]'); if (th) { if (S.sort.k === th.dataset.k) S.sort.dir = -S.sort.dir; else { S.sort.k = th.dataset.k; S.sort.dir = 1; } renderItems(); return; }
     var tr = e.target.closest('tr[data-key]'); if (tr) openItem(tr.dataset.key);
@@ -1522,7 +1588,7 @@
 
   // ═════════════════════════════ СКЛАДЫ
   function renderWh() {
-    var type = $('wType').value, arr = itemsBy(type, '');
+    var type = $('wType').value, arr = visAll().filter(function (it) { return !type || it.type === type; });   // v2.1: разбивка по всем складам независимо от выбранного
     var rows = S.whNames.map(function (w, i) {
       var r = { name: w, idx: i, q: 0, n: 0, v: 0, red: 0, byType: {} };
       S.types.forEach(function (t) { r.byType[t] = { q: 0, n: 0, v: 0 }; });
@@ -1547,20 +1613,70 @@
     renderWhMap();
   }
   function whItems(idx) {
-    var name = idx === -1 ? S.boot.whOut : S.whNames[idx];
-    $('iReset').click(); $('iWh').value = name; $('iType').value = $('wType').value; showView('items');
+    setWhSel([idx]); $('iReset').click(); $('iType').value = $('wType').value; showView('items');
+  }
+  S.whPending = {};   // row → {group, inc} — несохранённые изменения карточек складов
+  function whState(w) { var p = S.whPending[w.row] || {}; return { group: p.group !== undefined ? p.group : w.group, inc: p.inc !== undefined ? p.inc : w.inc }; }
+  /** Проверка связей «Настройки → Остатки»: по каждой колонке контроля — что настроено и что реально лежит в «Остатках». */
+  function whDiag() {
+    var st = S.D.settings, T = whTotals(), cols = S.whNames.concat([S.boot.whOut]), out = [];
+    cols.forEach(function (name, i) {
+      var isOut = name === S.boot.whOut, tt = isOut ? T.out : T.cols[i], ws = st.warehouses.filter(function (w) { return whState(w).group === name; });
+      var incRows = ws.filter(function (w) { return whState(w).inc && !isOut; }), rows1c = incRows.reduce(function (a, w) { return a + (w.count || 0); }, 0), rowsAll = ws.reduce(function (a, w) { return a + (w.count || 0); }, 0);
+      var alerts = [];
+      if (!isOut && !ws.length) alerts.push({ t: 'warn', m: 'Ни один склад 1С не привязан к этой колонке — в «Остатках» она всегда пустая.' });
+      if (!isOut && incRows.length && rows1c > 0 && tt.q <= 0) alerts.push({ t: 'err', m: 'Склад учитывается (Да, строк в выгрузке: ' + fmtN(rows1c) + '), но в «Остатках» колонка пустая — отчёты ещё не пересобраны после изменения настроек. Нажмите «Применить и пересобрать».' });
+      if (!isOut && ws.length && !incRows.length && rowsAll > 0) alerts.push({ t: 'info', m: 'Все склады этой колонки выключены — их остаток (' + fmtN(rowsAll) + ' строк 1С) идёт в «Вне контроля».' });
+      if (!isOut && tt.q > 0 && !incRows.length) alerts.push({ t: 'warn', m: 'В «Остатках» ещё есть ' + fmtQ(tt.q) + ' ед., хотя склад выключен — после пересборки колонка обнулится.' });
+      ws.forEach(function (w) { if (S.whPending[w.row]) alerts.push({ t: 'chg', m: '«' + w.name + '»: изменение не сохранено.' }); });
+      out.push({ name: name, idx: isOut ? -1 : i, isOut: isOut, tot: tt, ws: ws, inc: incRows.length, rows1c: rows1c, alerts: alerts });
+    });
+    var known = {}; cols.forEach(function (c) { known[c] = 1; });
+    var orphan = st.warehouses.filter(function (w) { return !known[whState(w).group]; });
+    return { cols: out, orphan: orphan };
   }
   function renderWhMap() {
-    var st = S.D.settings, wiz = S.role === 'wizard', opts = S.whNames.concat([S.boot.whOut]);
-    $('whMapTable').innerHTML = '<thead><tr><th class="nosort">Склад (как в 1С)</th><th class="nosort">Колонка контроля</th><th class="nosort">Учитывать в контроле</th><th class="nosort">Строк в последней выгрузке</th></tr></thead><tbody>' +
-      st.warehouses.map(function (w) {
-        return '<tr class="' + (w.inc ? '' : 'r-none') + '" data-row="' + w.row + '"><td>' + esc(w.name) + '</td><td>' + (wiz ? '<select data-f="group" style="padding:2px 4px">' + opts.map(function (o) { return '<option' + (o === w.group ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>' : esc(w.group)) + '</td>' +
-          '<td class="ctr">' + (wiz ? '<input type="checkbox" data-f="inc"' + (w.inc ? ' checked' : '') + '>' : (w.inc ? 'Да' : 'Нет')) + '</td><td class="num">' + fmtN(w.count) + '</td></tr>'; }).join('') + '</tbody>';
+    var st = S.D.settings, wiz = S.role === 'wizard', opts = S.whNames.concat([S.boot.whOut]), D = whDiag(), nPend = Object.keys(S.whPending).length;
+    var probs = D.cols.reduce(function (a, c) { return a + c.alerts.filter(function (x) { return x.t === 'err'; }).length; }, 0);
+    $('whMapInfo').textContent = 'Складов 1С: ' + st.warehouses.length + ' · учитываются: ' + st.warehouses.filter(function (w) { return whState(w).inc; }).length + (nPend ? ' · не сохранено изменений: ' + nPend : '') + (probs ? ' · ⚠ требуется пересборка' : '');
+    var ap = $('whApply'); ap.style.display = wiz ? '' : 'none'; ap.disabled = !nPend && !probs; ap.textContent = nPend ? '💾 Применить (' + nPend + ') и пересобрать' : '⟳ Пересобрать отчёты';
+    $('whCards').innerHTML = D.cols.map(function (c) {
+      var off = !c.isOut && !c.inc, warn = c.alerts.some(function (x) { return x.t === 'err' || x.t === 'warn'; });
+      var rows = c.ws.map(function (w) { var x = whState(w), chg = !!S.whPending[w.row];
+        return '<div class="w' + (x.inc ? '' : ' off') + (chg ? ' chg' : '') + '" data-row="' + w.row + '"><div class="nm" title="Склад, как он называется в выгрузке 1С">' + esc(w.name) + '</div><div class="ctl">' + (c.isOut ? '' : '<label class="sw" title="Учитывать в контроле"><input type="checkbox" data-f="inc"' + (x.inc ? ' checked' : '') + (wiz ? '' : ' disabled') + '><i></i></label><span class="hint">' + (x.inc ? 'учитывается' : 'не учитывается') + '</span>') +
+          '<span class="hint" title="Строк в последней выгрузке 1С">· ' + fmtN(w.count) + ' стр. 1С</span>' +
+          (wiz ? '<select data-f="group" title="Колонка контроля — куда попадает остаток этого склада">' + opts.map(function (o) { return '<option' + (o === x.group ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>' : '') + '</div></div>'; }).join('') || '<div class="sub">— нет привязанных складов 1С —</div>';
+      return '<div class="whcard' + (off ? ' off' : '') + (warn ? ' warn' : '') + '"><div class="h"><b class="clickable" data-sel="' + c.idx + '" title="Учёт по этому складу во всём приложении">' + (c.isOut ? '⊘ ' : '🏭 ') + esc(c.name) + '</b><span class="q">' + fmtQ(c.tot.q) + '<small style="font-size:11px;color:#777"> ед.</small></span></div>' +
+        '<div class="sub">в «Остатках»: ' + c.tot.n + ' поз. · ' + fmtN(c.tot.v) + ' BYN' + (c.isOut ? ' · склады с «Нет» и прочие вне учёта' : (c.inc ? ' · учитывается складов: ' + c.inc + ' (' + fmtN(c.rows1c) + ' строк 1С)' : ' · не учитывается')) + '</div>' + rows +
+        c.alerts.map(function (a) { return '<div class="al"' + (a.t === 'err' ? ' style="background:#fdecea;color:#b3261e"' : (a.t === 'info' ? ' style="background:#e8f0fe;color:#1a4d8f"' : '')) + '>' + (a.t === 'err' ? '⚠ ' : (a.t === 'chg' ? '✎ ' : 'ℹ ')) + esc(a.m) + '</div>'; }).join('') + '</div>';
+    }).join('') + (D.orphan.length ? '<div class="whcard warn"><div class="h"><b>❓ Склады с неизвестной колонкой</b></div>' + D.orphan.map(function (w) { return '<div class="w"><span class="nm">' + esc(w.name) + '</span><span class="hint">колонка «' + esc(whState(w).group) + '» — такой нет в «Остатках», при пересборке уйдёт в «Прочие»</span></div>'; }).join('') + '</div>' : '');
   }
-  $('whMapTable').addEventListener('change', function (e) {
+  $('whCards').addEventListener('change', function (e) {
     var el = e.target.closest('[data-f]'); if (!el || S.role !== 'wizard') return;
-    var row = +el.closest('tr').dataset.row, f = {}; f[el.dataset.f] = el.dataset.f === 'inc' ? el.checked : el.value;
-    call('kzwSetWarehouse', S.token, row, f).then(function (st) { S.D.settings = st; renderWhMap(); msg($('globalMsg'), 'Склад сохранён в «Настройки» — применится при следующей пересборке («Обновить отчёты»)', 'ok'); }).catch(function (err) { alert(err.message); });
+    var row = +el.closest('[data-row]').dataset.row, w = S.D.settings.warehouses.filter(function (x) { return x.row === row; })[0]; if (!w) return;
+    var p = S.whPending[row] || (S.whPending[row] = {});
+    if (el.dataset.f === 'inc') p.inc = el.checked; else p.group = el.value;
+    if ((p.inc === undefined || p.inc === w.inc) && (p.group === undefined || p.group === w.group)) delete S.whPending[row];
+    renderWhMap();
+  });
+  $('whCards').addEventListener('click', function (e) { var b = e.target.closest('[data-sel]'); if (!b) return; withBusy(function () { setWhSel([+b.dataset.sel]); renderAll(); }); });
+  $('whCheck').addEventListener('click', function () {
+    var D = whDiag(), lines = [];
+    D.cols.forEach(function (c) { c.alerts.forEach(function (a) { if (a.t !== 'chg') lines.push((a.t === 'err' ? '⚠ ' : '• ') + c.name + ': ' + a.m); }); });
+    D.orphan.forEach(function (w) { lines.push('⚠ ' + w.name + ': колонка «' + whState(w).group + '» не найдена в «Остатках».'); });
+    msg($('whMapMsg'), lines.length ? 'Проверка связей «Настройки → пересборка → Остатки»:\n' + lines.join('\n') : 'Проверка связей: все учитываемые склады присутствуют в «Остатках», расхождений нет.', lines.some(function (l) { return l.charAt(0) === '⚠'; }) ? 'err' : 'ok'); $('whMapMsg').style.whiteSpace = 'pre-line';
+    renderWhMap();
+  });
+  $('whApply').addEventListener('click', function () {
+    if (S.role !== 'wizard') return;
+    var list = Object.keys(S.whPending).map(function (r) { var p = S.whPending[r]; return { row: +r, group: p.group, inc: p.inc }; });
+    if (!confirm((list.length ? 'Записать изменения по ' + list.length + ' склад(ам) в лист «Настройки» и запустить' : 'Запустить') + ' пересборку отчётов (1–5 минут в фоне)? После неё остатки по складам в приложении обновятся сами.')) return;
+    var b = $('whApply'); b.disabled = true; msg($('whMapMsg'), list.length ? 'Записываю настройки складов…' : 'Запускаю пересборку…', 'info');
+    (list.length ? call('kzwSetWarehouses', S.token, list) : Promise.resolve(S.D.settings)).then(function (st) {
+      S.D.settings = st; S.whPending = {}; renderWhMap();
+      return call('kzwStartRebuild', S.token, 'new');
+    }).then(function () { msg($('whMapMsg'), 'Настройки сохранены, пересборка запущена в фоне — по завершении данные перечитаются автоматически, склад появится в «Остатках» и на полосе складов.', 'ok'); S.lastState = { busy: true, text: 'Пересборка запускается…', pending: true }; renderBanner(S.lastState); progRebuild(S.lastState); startPoll(); })
+      .catch(function (err) { msg($('whMapMsg'), err.message, 'err'); renderWhMap(); });
   });
   $('wType').addEventListener('change', renderWh);
 
@@ -1702,29 +1818,66 @@
     if (f.size > 25 * 1024 * 1024) { msg($('upMsg'), 'Файл больше 25 МБ — загрузите его через меню таблицы', 'err'); return; }
     S.file = f; $('dropName').textContent = f.name + ' (' + Math.round(f.size / 1024) + ' КБ)'; msg($('upMsg'), ''); $('uploadBtn').disabled = !!(S.lastState && S.lastState.busy);
   }
+  // v2.4: перед загрузкой — анализ файла (сверка с базой, даты, защита более свежих данных), затем подтверждение
+  function readFileB64(f, cb, eb) { var rd = new FileReader(); rd.onload = function () { cb(String(rd.result).split(',')[1]); }; rd.onerror = eb; rd.readAsDataURL(f); }
+  function closePv() { var o = $('pvOv'); if (o) o.parentNode.removeChild(o); }
+  function pvList(title, arr, total, fmtRow) {
+    if (!total) return '';
+    return '<details class="pvd"><summary>' + title + ' — ' + total + (total > arr.length ? ' (показаны первые ' + arr.length + ')' : '') + '</summary><ul>' + arr.map(fmtRow).join('') + '</ul></details>';
+  }
+  function showPreview(r, f, b64) {
+    closePv();
+    var relTxt = { older: ['pv-bad', '⚠ Файл СТАРШЕ данных, уже загруженных в базу (' + r.curDate + (r.curFile ? ', ' + esc(r.curFile) : '') + '). Более свежие позиции будут защищены от перезаписи.'], newer: ['pv-ok', '✔ Файл свежее данных в базе (' + r.curDate + '). Остатки будут обновлены.'], same: ['pv-info', 'Дата файла совпадает с датой данных в базе (' + r.curDate + ').'], unknown: ['pv-info', 'В базе пока нет сведений о датах позиций — после этой загрузки они появятся, и дальше программа сможет защищать более свежие данные.'] }[r.relation];
+    var h = '<div class="pvbox"><h3>Анализ файла перед загрузкой</h3>' +
+      '<div class="pvrow"><b>Файл:</b> ' + esc(f.name) + '<br><b>Вид отчёта:</b> ' + esc(r.title) + '<br><b>Дата отчёта:</b> ' + esc(r.fileDate) + ' <span class="hint">(' + esc(r.fileDateSrc) + ')</span></div>' +
+      '<div class="pvrel ' + relTxt[0] + '">' + relTxt[1] + '</div>' +
+      '<table class="pvt"><tr><td>Позиций в файле / в базе</td><td><b>' + fmtN(r.itemsFile) + '</b> / ' + fmtN(r.itemsOld) + '</td></tr>' +
+      '<tr><td>Режим</td><td>' + (r.merge ? 'частичное обновление — позиции из файла обновляются, остальные сохраняются' : 'полная замена данных') + '</td></tr>' +
+      '<tr><td>Без изменений</td><td>' + fmtN(r.same) + '</td></tr>' +
+      '<tr><td>Остаток вырос</td><td style="color:#1e7e34"><b>' + fmtN(r.upN) + '</b></td></tr>' +
+      '<tr><td>Остаток уменьшился</td><td style="color:#c0392b"><b>' + fmtN(r.downN) + '</b></td></tr>' +
+      '<tr><td>Новые позиции</td><td>' + fmtN(r.addedN) + '</td></tr>' +
+      '<tr><td>Нет в файле</td><td>' + fmtN(r.missingN) + (r.missingN ? (r.merge ? ' — будут сохранены как есть' : ' — будут удалены из базы') : '') + '</td></tr>' +
+      '<tr><td>Защищено (в базе свежее файла)</td><td><b>' + fmtN(r.protectedN) + '</b></td></tr>' +
+      '<tr><td>Всего единиц в базе</td><td>' + fmtN(r.qtyOld, 2) + ' → <b>' + fmtN(r.qtyNew, 2) + '</b></td></tr></table>' +
+      pvList('Сильнее всего уменьшатся', r.down, r.downN, function (x) { return '<li>' + esc(x.name) + ': ' + fmtN(x.old, 2) + ' → <b>' + fmtN(x.nw, 2) + '</b> (' + fmtN(x.d, 2) + ')</li>'; }) +
+      pvList('Сильнее всего вырастут', r.up, r.upN, function (x) { return '<li>' + esc(x.name) + ': ' + fmtN(x.old, 2) + ' → <b>' + fmtN(x.nw, 2) + '</b> (+' + fmtN(x.d, 2) + ')</li>'; }) +
+      pvList('Новые позиции', r.added, r.addedN, function (x) { return '<li>' + esc(x.name) + ': ' + fmtN(x.qty, 2) + '</li>'; }) +
+      pvList('Нет в файле', r.missing, r.missingN, function (x) { return '<li>' + esc(x.name) + ': было ' + fmtN(x.qty, 2) + '</li>'; }) +
+      pvList('Защищены от перезаписи старым файлом', r.prot, r.protectedN, function (x) { return '<li>' + esc(x.name) + ': в базе ' + fmtN(x.cur, 2) + ' (данные от ' + esc(x.date) + '), в файле ' + fmtN(x.file, 2) + '</li>'; }) +
+      (r.warnings && r.warnings.length ? '<div class="pvwarn">' + r.warnings.map(esc).join('<br>') + '</div>' : '') +
+      '<div class="actions" style="justify-content:flex-end;margin-top:12px"><button id="pvCancel">Отмена</button>' +
+      (r.protectedN ? '<button id="pvForce" title="Все позиции из файла заменят текущие, даже если в базе данные свежее">Загрузить, перезаписав всё</button>' : '') +
+      '<button class="primary" id="pvGo">' + (r.protectedN ? 'Загрузить, защитив свежее (' + r.protectedN + ')' : 'Загрузить и пересобрать') + '</button></div></div>';
+    var ov = document.createElement('div'); ov.id = 'pvOv'; ov.className = 'pvov'; ov.innerHTML = h; document.body.appendChild(ov);
+    $('pvCancel').onclick = function () { closePv(); msg($('upMsg'), 'Загрузка отменена.', 'info'); $('uploadBtn').disabled = false; };
+    $('pvGo').onclick = function () { closePv(); doUpload(f, b64, true); };
+    if ($('pvForce')) $('pvForce').onclick = function () { if (confirm('Позиции с более свежими данными в базе будут заменены данными из более старого файла. Продолжить?')) { closePv(); doUpload(f, b64, false); } };
+  }
+  function doUpload(f, b64, protect) {
+    $('uploadBtn').disabled = true; progStart('Загрузка отчёта 1С', ['Чтение файла', 'Отправка и распознавание', 'Запись в «Данные 1С»', 'Пересборка отчётов'], [1, 4, 2, 10], 6); progStep(1);
+    msg($('upMsg'), 'Отправляю на сервер и записываю (до минуты)…', 'info');
+    call('kzwUpload1C', S.token, f.name, b64, f.type || '', $('upMode').value, protect).then(function (r) {
+      var what = (r.title ? 'Распознан отчёт «' + r.title + '», дата ' + (r.fileDate || r.date || '') + '. ' : '') + (r.merged ? 'Частичное обновление: из файла взято строк ' + r.fileRows + ' (' + r.itemsFile + ' поз.), сохранено прежних строк ' + r.kept + ' — всего в «Данных 1С» ' + r.rows + '.' : 'Загружено строк 1С: ' + r.rows + (r.itemsFile ? ' (' + r.itemsFile + ' поз.)' : '') + (r.protectedN ? '.' : ' — прежние данные заменены.')) + (r.protectedN ? ' Защищено более свежих позиций: ' + r.protectedN + '.' : '') + (r.warnings && r.warnings.length ? ' Замечания: ' + r.warnings.slice(0, 3).join(' ') : '');
+      msg($('upMsg'), what + ' Пересборка запущена в фоне — ход в блоке «Состояние».', 'ok'); progStep(3, 'Пересборка запускается…'); progStart('Пересборка отчётов', REBUILD_STEPS, REBUILD_W, 5); progStep(0, 'файл загружен, пересборка запускается…');
+      S.file = null; $('dropName').textContent = 'файл не выбран'; $('file1c').value = '';
+      S.lastState = { busy: true, text: 'Пересборка запускается…', pending: true }; renderBanner(S.lastState); renderLoadState(S.lastState); startPoll();
+    }).catch(function (e) { msg($('upMsg'), e.message, 'err'); $('uploadBtn').disabled = false; progDone('', e.message); });
+  }
   $('uploadBtn').addEventListener('click', function () {
     var f = S.file; if (!f) return;
-    if (!confirm('Загрузить «' + f.name + '» на лист «Данные 1С» и запустить пересборку всех отчётов?')) return;
-    $('uploadBtn').disabled = true; msg($('upMsg'), 'Читаю файл…', 'info');
-    var rd = new FileReader();
-    rd.onload = function () {
-      var b64 = String(rd.result).split(',')[1];
-      msg($('upMsg'), 'Отправляю на сервер и конвертирую (до минуты)…', 'info');
-      call('kzwUpload1C', S.token, f.name, b64, f.type || '').then(function (r) {
-        msg($('upMsg'), 'Загружено строк 1С: ' + r.rows + '. Пересборка запущена в фоне — ход в блоке «Состояние».', 'ok');
-        S.file = null; $('dropName').textContent = 'файл не выбран'; $('file1c').value = '';
-        S.lastState = { busy: true, text: 'Пересборка запускается…', pending: true }; renderBanner(S.lastState); renderLoadState(S.lastState); startPoll();
-      }).catch(function (e) { msg($('upMsg'), e.message, 'err'); $('uploadBtn').disabled = false; });
-    };
-    rd.onerror = function () { msg($('upMsg'), 'Не удалось прочитать файл', 'err'); $('uploadBtn').disabled = false; };
-    rd.readAsDataURL(f);
+    $('uploadBtn').disabled = true; msg($('upMsg'), 'Читаю файл и сверяю с базой…', 'info');
+    readFileB64(f, function (b64) {
+      call('kzwPreview1C', S.token, f.name, b64, f.type || '', $('upMode').value).then(function (r) { msg($('upMsg'), 'Анализ готов — подтвердите загрузку.', 'info'); showPreview(r, f, b64); })
+        .catch(function (e) { msg($('upMsg'), e.message, 'err'); $('uploadBtn').disabled = false; });
+    }, function () { msg($('upMsg'), 'Не удалось прочитать файл', 'err'); $('uploadBtn').disabled = false; });
   });
   function rebuild(mode) {
     var q = { 'new': 'Запустить пересборку отчётов (1–5 минут, в фоне)?', resume: 'Продолжить прерванную пересборку?', reset: 'Сбросить состояние пересборки и триггеры продолжения?' }[mode];
     if (!confirm(q)) return;
     call('kzwStartRebuild', S.token, mode).then(function (r) {
       if (r.reset) { msg($('rbMsg'), 'Состояние сброшено', 'ok'); S.lastState = { busy: false, text: '' }; renderBanner(S.lastState); renderLoadState(S.lastState); return; }
-      msg($('rbMsg'), 'Пересборка запущена в фоне', 'ok'); S.lastState = { busy: true, text: 'Пересборка запускается…', pending: true }; renderBanner(S.lastState); renderLoadState(S.lastState); startPoll();
+      msg($('rbMsg'), 'Пересборка запущена в фоне', 'ok'); S.lastState = { busy: true, text: 'Пересборка запускается…', pending: true }; renderBanner(S.lastState); renderLoadState(S.lastState); progRebuild(S.lastState); startPoll();
     }).catch(function (e) { msg($('rbMsg'), e.message, 'err'); });
   }
   $('rbNew').addEventListener('click', function () { rebuild('new'); }); $('rbResume').addEventListener('click', function () { rebuild('resume'); }); $('rbReset').addEventListener('click', function () { rebuild('reset'); });
@@ -2810,6 +2963,152 @@
   $('refreshBtn').addEventListener('click', function () { refresh(false); });
   $('listClose').addEventListener('click', function () { $('listBg').classList.remove('open'); });
   document.querySelectorAll('.modal-bg').forEach(function (bg) { bg.addEventListener('click', function (e) { if (e.target === bg) bg.classList.remove('open'); }); });
+
+
+  // ═════════════════════════════ v2.3: КОЛЬЦО ХОДА ВЫПОЛНЕНИЯ (сегменты = этапы, заполнение = % от 100)
+  function ringSvg(pct, segs, size, stroke, weights) {
+    size = size || 76; stroke = stroke || 9; var r = (size - stroke) / 2 - 1, c = 2 * Math.PI * r, gap = segs > 1 ? Math.min(6, c / segs * 0.12) : 0, html = '';
+    var W = weights && weights.length === segs ? weights : null, tot = W ? W.reduce(function (a, b) { return a + b; }, 0) : segs, start = 0;
+    for (var i = 0; i < segs; i++) {
+      var segLen = c * (W ? W[i] / tot : 1 / segs), fillTo = Math.max(0, Math.min(segLen - gap, (pct / 100) * c - start));
+      html += '<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="#e3e8ef" stroke-width="' + stroke + '" stroke-dasharray="' + (segLen - gap) + ' ' + (c - segLen + gap) + '" stroke-dashoffset="' + (-start) + '" stroke-linecap="' + (segs > 1 ? 'butt' : 'round') + '"/>';
+      if (fillTo > 0) html += '<circle cx="' + size / 2 + '" cy="' + size / 2 + '" r="' + r + '" fill="none" stroke="' + (pct >= 100 ? '#27AE60' : '#1a73e8') + '" stroke-width="' + stroke + '" stroke-dasharray="' + fillTo + ' ' + (c - fillTo) + '" stroke-dashoffset="' + (-start) + '"/>';
+      start += segLen;
+    }
+    return '<svg viewBox="0 0 ' + size + ' ' + size + '">' + html + '</svg><div class="pc">' + Math.round(pct) + '%</div>';
+  }
+  var PROG = { on: false, steps: [], w: null, i: -1, pct: 0, base: 0, span: 0, t0: 0, timer: null, title: '', started: 0, typical: 0 };
+  function progW(i) { var n = PROG.steps.length, W = PROG.w && PROG.w.length === n ? PROG.w : null, tot = W ? W.reduce(function (a, b) { return a + b; }, 0) : n, b = 0; for (var j = 0; j < i; j++) b += W ? W[j] / tot : 1 / n; return { base: 100 * b, span: 100 * (W ? W[i] / tot : 1 / n) }; }
+  /** Начать показ хода: steps — названия этапов (каждый = сегмент кольца, равная доля 100 %). */
+  function progStart(title, steps, weights, typicalMin) {
+    PROG.on = true; PROG.title = title; PROG.steps = steps.slice(); PROG.w = weights || null; PROG.typical = typicalMin || 0; PROG.started = Date.now(); PROG.i = -1; PROG.pct = 0; PROG.t0 = Date.now();
+    $('progBox').classList.add('on'); progStep(0); if (PROG.timer) clearInterval(PROG.timer); PROG.timer = setInterval(progTick, 400);
+  }
+  /** Перейти к этапу i (0-based); внутри этапа процент плавно подрастает со временем, но не дальше 90 % этапа, пока не наступит следующий. */
+  function progStep(i, sub) { if (!PROG.on) return; var n = PROG.steps.length; PROG.i = Math.min(i, n - 1); var w = progW(PROG.i); PROG.base = w.base; PROG.span = w.span; PROG.t0 = Date.now(); PROG.pct = Math.max(PROG.pct, PROG.base); if (sub) PROG.sub = sub; else PROG.sub = ''; progRender(); }
+  function progTick() { if (!PROG.on) return; if (PROG.title === 'Пересборка отчётов' && S.lastState && S.lastState.busy && (Date.now() % 4000) < 450) renderBanner(S.lastState); var el = (Date.now() - PROG.t0) / 1000, k = 1 - Math.exp(-el / 40); PROG.pct = Math.max(PROG.pct, PROG.base + PROG.span * 0.9 * k); progRender(); }
+  function progEta() { var el = (Date.now() - PROG.started) / 60000, s = 'прошло ' + (el < 1 ? Math.round(el * 60) + ' с' : Math.round(el) + ' мин'); if (PROG.typical) { var left = Math.max(0, Math.min(PROG.typical - el, PROG.typical * (1 - PROG.pct / 100))); s += ' · обычно ' + PROG.typical + ' мин' + (left > 0.5 ? ', осталось ≈ ' + Math.ceil(left) + ' мин' : ', вот-вот завершится'); } return s; }
+  function progDone(okText, err) { if (!PROG.on) return; PROG.pct = err ? PROG.pct : 100; PROG.sub = okText || ''; progRender(err); clearInterval(PROG.timer); PROG.timer = null; setTimeout(function () { PROG.on = false; $('progBox').classList.remove('on'); }, err ? 6000 : 2500); }
+  function progRender(err) {
+    $('progRing').innerHTML = ringSvg(PROG.pct, PROG.steps.length, 76, 9, PROG.w);
+    $('progTitle').textContent = PROG.title + (PROG.pct < 100 && !err ? ' · ' + Math.round(PROG.pct) + ' %' : ''); $('progSub').textContent = err ? ('Ошибка: ' + err) : (PROG.pct >= 100 ? (PROG.sub || 'Готово') : 'Этап ' + (PROG.i + 1) + ' из ' + PROG.steps.length + ': ' + PROG.steps[PROG.i] + (PROG.sub ? ' — ' + PROG.sub : '') + '\n' + progEta());
+    $('progSteps').innerHTML = PROG.steps.map(function (st, j) { return '<span class="st' + (j < PROG.i || PROG.pct >= 100 ? ' done' : (j === PROG.i ? ' cur' : '')) + '">' + (j + 1) + '. ' + esc(st) + '</span>'; }).join('');
+    if (err) $('progSub').style.color = '#b3261e'; else $('progSub').style.color = '';
+  }
+  /** Ход пересборки по ответу kzwStatus: ожидание запуска → стадии 1–4 → готово. */
+  var REBUILD_STEPS = ['Запуск', 'Остатки и справочник', 'Вкладки брендов', 'Сводка, статистика, критический запас', 'Аналоги'], REBUILD_W = [5, 35, 30, 20, 10];
+  function progRebuild(st) {
+    if (!st || !st.busy) { if (PROG.on && PROG.title === 'Пересборка отчётов') progDone(/^ОШИБКА/.test(st && st.text || '') ? '' : 'Пересборка завершена', /^ОШИБКА/.test(st && st.text || '') ? st.text : ''); return; }
+    if (!PROG.on || PROG.title !== 'Пересборка отчётов') progStart('Пересборка отчётов', REBUILD_STEPS, REBUILD_W, 5);
+    var stage = st.stage === null || st.stage === undefined ? -1 : +st.stage, m = String(st.text || '').match(/[Сс]тади[яи]\s*(\d)/); if (stage < 0 && m) stage = +m[1] - 1;
+    var i = stage < 0 ? 0 : stage + 1, sub = (st.pending ? 'ждёт запуска по триггеру (до 1 мин)' : (st.hasTrigger && !st.running ? 'пауза между стадиями — продолжение по триггеру через ~1 мин' : (st.running ? 'скрипт выполняется' : '')));
+    if (i !== PROG.i) progStep(i, sub); else if (sub !== PROG.sub) { PROG.sub = sub; progRender(); }
+  }
+  // ═════════════════════════════ v2.3: ВИД КУРСОРА
+  function cursorSvg(kind, color, size) {
+    var out = color === '#fff' ? '#222' : '#fff';
+    var arrow = '<path d="M3 2 L3 20 L8 15 L11 22 L14 21 L11 14 L18 14 Z" fill="' + color + '" stroke="' + out + '" stroke-width="1.6" stroke-linejoin="round"/>';
+    var hand = '<path d="M9 2 C7.9 2 7 2.9 7 4 L7 13 L5.2 11.2 C4.4 10.4 3.1 10.4 2.3 11.2 C1.6 12 1.6 13.2 2.3 14 L7.5 20.5 C8.3 21.5 9.5 22 10.8 22 L15 22 C17.8 22 20 19.8 20 17 L20 10 C20 9 19.2 8.2 18.2 8.2 C17.6 8.2 17.1 8.5 16.8 8.9 C16.5 8.1 15.7 7.5 14.8 7.5 C14.2 7.5 13.7 7.7 13.3 8.1 C13 7.3 12.2 6.8 11.4 6.8 L11 6.8 L11 4 C11 2.9 10.1 2 9 2 Z" fill="' + color + '" stroke="' + out + '" stroke-width="1.5" stroke-linejoin="round"/>';
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + size + '" height="' + size + '" viewBox="0 0 24 24">' + (kind === 'hand' ? hand : arrow) + '</svg>';
+    return 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
+  }
+  var CURSORS = { big: ['#000', 40], black: ['#000', 26], white: ['#fff', 26], blue: ['#1a73e8', 26], orange: ['#f0b400', 26], green: ['#27AE60', 26], bigblue: ['#1a73e8', 40], bigorange: ['#f0b400', 40] };
+  function applyCursor(name) {
+    var st = $('cursorStyle'); if (!st) { st = document.createElement('style'); st.id = 'cursorStyle'; document.head.appendChild(st); }
+    var c = CURSORS[name]; if (!c) { st.textContent = ''; $('curSel').value = ''; return; }
+    var k = c[1] / 24, a = cursorSvg('arrow', c[0], c[1]), h = cursorSvg('hand', c[0], c[1]);
+    st.textContent = 'html, body, body * { cursor: ' + a + ' ' + Math.round(3 * k) + ' ' + Math.round(2 * k) + ', auto !important; }' +
+      ' a, button, select, label, .tab, .whchip, .kpi.link, .clickable, [data-open], .rolecard, .tile, input[type=checkbox], input[type=file], summary, .adv-chip, .linkbtn { cursor: ' + h + ' ' + Math.round(9 * k) + ' ' + Math.round(3 * k) + ', pointer !important; }' +
+      ' body.busy, body.busy * { cursor: none !important; } body.busy-sys, body.busy-sys * { cursor: progress !important; }' +
+      ' input[type=text], input[type=search], input[type=password], textarea { cursor: text !important; }';
+    $('curSel').value = name;
+  }
+  $('curSel').addEventListener('change', function () { applyCursor($('curSel').value); try { localStorage.setItem('kzw_cursor', $('curSel').value); } catch (e) {} });
+  try { applyCursor(localStorage.getItem('kzw_cursor') || ''); } catch (e) {}
+
+  // ═════════════════════════════ v2.4: ВИД КУРСОРА ВО ВРЕМЯ РАБОТЫ
+  var BUSY_WRENCH = $('busyCursor').innerHTML;
+  var BUSY = {
+    ring: '<circle cx="22" cy="22" r="16" fill="none" stroke="rgba(0,0,0,.18)" stroke-width="5"/><circle cx="22" cy="22" r="16" fill="none" stroke="#1a73e8" stroke-width="5" stroke-linecap="round" stroke-dasharray="26 80"><animateTransform attributeName="transform" type="rotate" from="0 22 22" to="360 22 22" dur="0.9s" repeatCount="indefinite"/></circle>',
+    gear: '<g><animateTransform attributeName="transform" type="rotate" from="0 22 22" to="360 22 22" dur="2.4s" repeatCount="indefinite"/><path fill="#5b6b7d" stroke="#2f3a46" stroke-width="1.5" d="M19 4h6l1 5 4 1.7 4.3-3 4.2 4.2-3 4.3L37 20l5 1v6l-5 1-1.7 4 3 4.3-4.2 4.2-4.3-3L25 39l-1 5h-6l-1-5-4-1.7-4.3 3-4.2-4.2 3-4.3L5 28l-5-1v-6l5-1 1.7-4-3-4.3 4.2-4.2 4.3 3L17 9z" transform="translate(1 -1) scale(.95)"/><circle cx="22" cy="22" r="6" fill="#fff" stroke="#2f3a46" stroke-width="1.5"/></g>',
+    hourglass: '<g><animateTransform attributeName="transform" type="rotate" values="0 22 22;0 22 22;180 22 22;180 22 22" keyTimes="0;.6;.9;1" dur="2s" repeatCount="indefinite"/><path d="M10 4h24M10 40h24" stroke="#2f3a46" stroke-width="4" stroke-linecap="round"/><path d="M12 5 C12 18 20 19 22 22 C20 25 12 26 12 39 L32 39 C32 26 24 25 22 22 C24 19 32 18 32 5Z" fill="rgba(255,255,255,.85)" stroke="#2f3a46" stroke-width="2"/><path d="M15 36 C16 30 20 28 22 26 C24 28 28 30 29 36Z" fill="#f0b400"/></g>',
+    dots: '<circle cx="8" cy="22" r="5" fill="#1a73e8"><animate attributeName="cy" values="22;12;22;22" dur="1s" repeatCount="indefinite"/></circle><circle cx="22" cy="22" r="5" fill="#f0b400"><animate attributeName="cy" values="22;22;12;22" dur="1s" begin=".15s" repeatCount="indefinite"/></circle><circle cx="36" cy="22" r="5" fill="#27AE60"><animate attributeName="cy" values="22;22;22;12;22" dur="1s" begin=".3s" repeatCount="indefinite"/></circle>',
+    pulse: '<circle cx="22" cy="22" r="6" fill="#1a73e8"/><circle cx="22" cy="22" r="6" fill="none" stroke="#1a73e8" stroke-width="3"><animate attributeName="r" values="6;20" dur="1.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0" dur="1.2s" repeatCount="indefinite"/></circle><circle cx="22" cy="22" r="6" fill="none" stroke="#1a73e8" stroke-width="3"><animate attributeName="r" values="6;20" dur="1.2s" begin=".6s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;0" dur="1.2s" begin=".6s" repeatCount="indefinite"/></circle>',
+    radar: '<circle cx="22" cy="22" r="18" fill="rgba(20,40,30,.85)" stroke="#27AE60" stroke-width="2"/><circle cx="22" cy="22" r="9" fill="none" stroke="#27AE60" stroke-opacity=".6"/><g><animateTransform attributeName="transform" type="rotate" from="0 22 22" to="360 22 22" dur="1.4s" repeatCount="indefinite"/><path d="M22 22 L22 4 A18 18 0 0 1 38 14Z" fill="#3ddc84" fill-opacity=".55"/><path d="M22 22 L22 4" stroke="#7dffb0" stroke-width="2"/></g>',
+    orbit: '<circle cx="22" cy="22" r="6" fill="#f0b400"/><ellipse cx="22" cy="22" rx="18" ry="18" fill="none" stroke="rgba(0,0,0,.2)" stroke-width="1.5"/><g><animateTransform attributeName="transform" type="rotate" from="0 22 22" to="360 22 22" dur="1s" repeatCount="indefinite"/><circle cx="22" cy="4" r="4.5" fill="#1a73e8" stroke="#fff" stroke-width="1.5"/></g>',
+    bars: '<rect x="4" y="10" width="7" height="24" rx="2" fill="#1a73e8"><animate attributeName="height" values="24;10;24" dur=".9s" repeatCount="indefinite"/><animate attributeName="y" values="10;17;10" dur=".9s" repeatCount="indefinite"/></rect><rect x="18" y="10" width="7" height="24" rx="2" fill="#f0b400"><animate attributeName="height" values="24;10;24" dur=".9s" begin=".15s" repeatCount="indefinite"/><animate attributeName="y" values="10;17;10" dur=".9s" begin=".15s" repeatCount="indefinite"/></rect><rect x="32" y="10" width="7" height="24" rx="2" fill="#27AE60"><animate attributeName="height" values="24;10;24" dur=".9s" begin=".3s" repeatCount="indefinite"/><animate attributeName="y" values="10;17;10" dur=".9s" begin=".3s" repeatCount="indefinite"/></rect>'
+  };
+  function applyBusy(name) {
+    var el = $('busyCursor'); if (!BUSY[name] && name !== 'sys') name = 'wrench';
+    document.body.classList.toggle('busy-sys', name === 'sys');
+    el.innerHTML = BUSY[name] || BUSY_WRENCH; $('busySel').value = name;
+  }
+  $('busySel').addEventListener('change', function () {
+    var v = $('busySel').value; applyBusy(v); try { localStorage.setItem('kzw_busy', v); } catch (e) {}
+    // показать образец на 3 секунды
+    loading(true); setTimeout(function () { loading(false); }, 3000);
+  });
+  try { applyBusy(localStorage.getItem('kzw_busy') || 'wrench'); } catch (e) {}
+  // ═════════════════════════════ v2.3: ВСПЛЫВАЮЩИЕ ПОДСКАЗКИ — для каждой кнопки, поля и вкладки
+  var TIPS = {
+    // вход и шапка
+    loginBtn: 'Войти как WIZARD по паролю. ПРОСМОТР — без пароля, карточка слева.', pwd: 'Пароль WIZARD (по умолчанию 2801; меняется на вкладке «Пароль»).', apiBtn: 'Адрес веб-приложения Apps Script (…/exec), куда страница отправляет запросы. Нужен только для сайта и настольной версии.', apiInput: 'Ссылка …/exec из Apps Script: Развернуть → Управление развёртываниями → URL веб-приложения.', apiSave: 'Проверить связь с Google и запомнить адрес на этом устройстве.',
+    fsMinus: 'Уменьшить размер шрифта во всём приложении (запоминается).', fsPlus: 'Увеличить размер шрифта.', busySel: 'Вид курсора на время выполнения работы (загрузка, пересчёт, обновление): ключ и гайка, кольцо, шестерёнка, песочные часы, точки, пульс, радар, спутник, столбики или системный. При выборе показывается образец на 3 секунды. Запоминается на этом устройстве.', curSel: 'Вид курсора мыши: обычный, крупный или цветной — чтобы было лучше видно на экране. Запоминается на этом устройстве.', logoutBtn: 'Выйти и вернуться к выбору уровня доступа.', switchBtn: 'Переключить уровень доступа без выхода: ПРОСМОТР ↔ WIZARD.', refreshBtn: 'Перечитать данные из Google-таблицы без пересборки отчётов (3–8 секунд).', soundBtn: 'Звуковое предупреждение о новых КРАСНЫХ позициях: вкл / выкл.', alertBtn: 'Критические остатки: число КРАСНЫХ позиций и сколько из них новых. Клик — список.', advBtn: 'Советник: число рекомендаций по заказу и остаткам. Клик — открыть.',
+    // дашборд / фильтры
+    dType: 'Показать дашборд только по одному типу: оборудование, запчасти или масла.', dBrand: 'Показать дашборд только по одному бренду.', layoutBtn: 'WIZARD: перетащить и скрыть блоки дашборда — макет сохраняется для всех.', layoutReset: 'Вернуть стандартный макет дашборда.',
+    iSearch: 'Поиск по ключу, артикулу, наименованию, бренду, группе, комментарию.', iType: 'Фильтр по типу.', iBrand: 'Фильтр по бренду.', iStat: 'Фильтр по статусу светофора: КРАСНЫЙ / ЖЁЛТЫЙ / ОК / без минимума / исключённые.', iGrp: 'Фильтр по группе замен: конкретная группа, только в группах или без группы.', iStock: 'Показывать только позиции с остатком больше нуля.', iReset: 'Сбросить все фильтры списка.', iMore: 'Показать следующую порцию строк (список выводится частями для скорости).', iBulk: 'WIZARD: задать минимум / критический / целевой запас, группу или исключение сразу всем отфильтрованным позициям.', iCsv: 'Выгрузить отфильтрованный список в CSV (открывается в Excel).',
+    cType: 'Фильтр по типу.', cBrand: 'Фильтр по бренду.', cStat: 'Только КРАСНЫЕ, только ЖЁЛТЫЕ или оба.', cSearch: 'Поиск в критическом списке.', cGroups: 'Позиции одной непокрытой группы замен показать одной строкой — заказывать нужно одну позицию группы, не все.', cCsv: 'Выгрузить список к заказу (ключ, наименование, дефицит, к заказу, сумма) в CSV.',
+    // советник
+    advRefresh: 'Пересчитать рекомендации Советника по текущим данным (обычно считаются из кэша ускорителя мгновенно).', advSettingsBtn: 'WIZARD: сроки поставки, страховой запас, классы ABC/XYZ, сезонность, резерв Битрикс24, еженедельная сводка.', advSave: 'Записать параметры Советника в лист «Настройки» — для всех пользователей — и пересчитать.', advReserveBtn: 'Прочитать открытые сделки Битрикс24 и обновить резерв товаров под них (иначе обновляется при каждой загрузке 1С).', advDigestOn: 'Каждый понедельник в 9:00 отправлять сводку рекомендаций в Битрикс24.', advDigestNow: 'Отправить сводку Советника в Битрикс24 прямо сейчас (проверка связи).', advSearch: 'Поиск в таблице Советника.', advBrand: 'Фильтр по бренду.', advType: 'Фильтр по типу.', advCls: 'Класс важности: A — первые 80 % стоимости расхода, B — до 95 %, C — остальное.', advFlag: 'Показать только позиции с определённым признаком: заказать сейчас, точка заказа близко, нет минимума, залежалый и т.д.', advKeysOff: 'Снять фильтр «позиции рекомендации» и показать все.', advCart: 'Добавить отмеченные галочками позиции в корзину заказа с рекомендуемым количеством.', advMin: 'WIZARD: записать расчётные минимумы отмеченных позиций в столбец «Мин. запас» Справочника.', advCsv: 'Выгрузить таблицу Советника в CSV.', advSetsMode: 'Добавить наборы к существующим или заменить весь лист «Наборы».', advSetsSave: 'Записать строки наборов на лист «Наборы» и пересчитать комплектность.', advClasses: 'Для каких классов Советник поднимает срочные (красные/жёлтые) рекомендации.', advReserveOn: 'Вычитать ли из доступного остатка товары открытых сделок Битрикс24.',
+    advLeadDefault: 'Сколько дней проходит от заказа до прихода на склад, если для бренда не задано отдельно.', advSafety: 'Надбавка к минимуму на колебания спроса и задержки поставок, в процентах.', advCycl: 'Как часто делаете заказы поставщику: рекомендуемое количество закрывает срок поставки плюс этот период.', advAbcA: 'Граница класса A по накопленной доле стоимости расхода.', advAbcB: 'Граница класса B.', advXyzX: 'Коэффициент вариации расхода, до которого позиция считается стабильной (X).', advXyzY: 'До этого значения — колеблющийся расход (Y), выше — непредсказуемый (Z).', advDead: 'Сколько дней без движения считать позицию залежалой.', advMinDays: 'Минимальная длина истории снимков, с которой Советник начинает считать расход.', advLeads: 'Срок поставки по отдельным брендам: «Бренд = дни», по одному в строке.',
+    // заказ
+    oType: 'Фильтр кандидатов по типу.', oSrc: 'Откуда брать кандидатов: красные и жёлтые, только красные, все с дефицитом до целевого или все позиции.', oSearch: 'Поиск среди кандидатов на заказ.', oGroups: 'Группа замен — одной строкой (заказать одну позицию группы).', oHideOrdered: 'Скрыть то, что уже есть в заказах со статусом «согласован» / «отправлен поставщику».', oAddAll: 'Добавить все отмеченные галочками строки в корзину.', oCsv: 'Выгрузить список кандидатов в CSV.', oName: 'Название заказа — поставщик, дата; под этим именем он сохранится на лист «Заказы».', oCartCsv: 'Выгрузить корзину в CSV — для письма поставщику.', oCartCopy: 'Скопировать строки корзины в буфер обмена (вставить в письмо или Excel).', oCartClear: 'Очистить корзину (сохранённые заказы не трогаются).', oCartSave: 'WIZARD: записать корзину на лист «Заказы» со статусом «черновик». Дальше статус меняется в списке ниже.', oSavedRefresh: 'Перечитать сохранённые заказы с листа «Заказы».',
+    xSearch: 'Поиск среди исключённых позиций.', xBrand: 'Фильтр по бренду.', xAdd: 'WIZARD: исключить позиции списком — ключи или артикулы, по одному в строке, с причиной.', xCsv: 'Выгрузить исключённые в CSV.',
+    // склады, бренды, группы, история
+    wType: 'Разбивка по складам только для одного типа.', whCheck: 'Сверить лист «Настройки» с «Остатками»: найти склады, которые включены, но пустые (нужна пересборка), и другие расхождения.', whApply: 'Записать изменения карточек в лист «Настройки» и запустить пересборку отчётов — только после неё склад появится в «Остатках».',
+    bType: 'Статистика брендов только по одному типу.', bSearch: 'Поиск бренда.', bCsv: 'Выгрузить статистику брендов в CSV.', gSearch: 'Поиск группы замен по ID, назначению или ключам состава.', gStat: 'Фильтр групп по статусу светофора.', gNew: 'WIZARD: создать новую группу замен (взаимозаменяемые позиции с общим минимумом).', hType: 'История загрузок по одному типу или всего.',
+    // загрузка 1С
+    uploadBtn: 'Сначала программа сверит файл с базой и покажет отчёт: дата отчёта, сколько позиций вырастет/уменьшится, какие новые, что защищено как более свежее. Запись начнётся только после вашего подтверждения.', upMode: 'Что делать с уже загруженными «Данными 1С»: заменить всё (полная выгрузка) или обновить только позиции из файла (частичный отчёт с отбором).', file1c: 'Файл отчёта 1С (.xlsx): «Остатки по складам» или «Остатки ТМЦ на складах».', uploadBtn: 'Отправить файл в Google-таблицу («Данные 1С») и запустить пересборку отчётов в фоне (1–5 минут).', rbNew: 'Пересобрать все отчёты по текущим «Данным 1С» — после правки минимумов, групп, складов или правил.', rbResume: 'Продолжить пересборку, прерванную по лимиту времени, с той стадии, где она остановилась.', rbReset: 'Сбросить зависшую пересборку (состояние и триггеры), чтобы запустить заново.', setYellow: 'ЖЁЛТЫЙ, если остаток ≤ минимум × (1 + порог). 20 % = запас 12 при минимуме 10 уже жёлтый.', setDefMin: 'Минимум для позиций без заданного: пусто — не контролировать; 1 — сигнализировать обо всём, что осталось в 1 шт.', setSave: 'Записать порог и минимум по умолчанию в лист «Настройки» (B2, B3); статусы пересчитаются при пересборке.',
+    rFilter: 'Фильтр сверки: все, нерешённые, решённые.', rSearch: 'Поиск в сверке дублей.', aKind: 'Что показать в аналогах: предложения, принятые, база Cross.', aSearch: 'Поиск по аналогам.', crossFile: 'CSV-каталог кроссов (аналогов) для загрузки в базу.', crossMode: 'Добавить к базе аналогов или заменить её.', crossUpload: 'Загрузить каталог аналогов и пересчитать предложения.', sSearch: 'Поиск товара по ключу, артикулу, наименованию, бренду — статистика по позиции.', sType: 'Ограничить поиск типом.', sAgg: 'Сводная статистика по всем найденным позициям.', sOpenCard: 'Открыть карточку позиции (WIZARD — с правкой минимумов).',
+    // листы, конструктор, пароль
+    tileSearch: 'Найти лист книги по названию.', newSheetBtn: 'WIZARD: добавить новый лист в Google-таблицу.', sheetBack: 'Вернуться к плиткам всех листов.', sheetSel: 'Выбрать лист книги для просмотра / правки.', sheetReload: 'Перечитать лист из таблицы.', fxInput: 'Строка формул: значение или формула выбранной ячейки; Enter — записать в таблицу.', fxSave: 'Записать значение / формулу в ячейку таблицы.', ctApply: 'Применить оформление (жирный, цвет, заливка, выравнивание) к выбранной ячейке.', ctClose: 'Закрыть панель оформления.', pageBack: 'Назад к списку.', pageEdit: 'WIZARD: редактировать эту страницу в Конструкторе.', bNew: 'Создать новую страницу (вкладку) из блоков: текст, ссылки, фрагмент листа, картинка, показатели.', uiFont: 'Размер шрифта по умолчанию для всех пользователей, %.', bSaveUi: 'Сохранить оформление (шрифт, названия вкладок) для всех пользователей.', bSaveSheets: 'Сохранить, какие листы книги видны в приложении для ПРОСМОТРА.', bTitle: 'Название страницы — кнопка в шапке.', bIcon: 'Значок (эмодзи) перед названием.', bOrder: 'Порядок среди других страниц (число).', bTab: 'Показывать страницу кнопкой в шапке.', bDelete: 'Удалить страницу безвозвратно.', bPreview: 'Посмотреть страницу как её увидят пользователи.', bSave: 'Сохранить страницу на лист «Веб-страницы».',
+    pWiz: 'Новый пароль WIZARD.', pSave: 'Сохранить новый пароль (старый перестанет действовать).', edgeUrl: 'Адрес ускорителя Cloudflare (https://kz-edge….workers.dev) из файла CONNECT.txt.', edgeKey: 'Ключ EDGE_KEY из CONNECT.txt.', edgeCheck: 'Проверить связь с ускорителем.', edgeOff: 'Отключить ускоритель: Apps Script перестанет сбрасывать его кэш.', edgeSave: 'Подключить: Apps Script будет сообщать ускорителю о каждом изменении данных.',
+    b24Domain: 'Адрес вашего портала Битрикс24 (firma.bitrix24.by).', b24Wizards: 'Кто из сотрудников Битрикс24 входит как WIZARD: e-mail или ID через запятую.', b24Hook: 'Входящий вебхук Битрикс24 (права im, crm) для уведомлений и резерва.', b24Notify: 'Кому слать уведомления: ID сотрудников или chat… через запятую.', b24NotifyOn: 'Слать уведомление о новых КРАСНЫХ позициях после каждой загрузки 1С.', b24Check: 'Проверить настройки и вебхук.', b24Test: 'Отправить тестовое сообщение в Битрикс24.', b24Save: 'Сохранить настройки Битрикс24.',
+    itemSave: 'Записать минимум / критический / целевой запас, группу, комментарий и исключение в «Справочник».', itemClose: 'Закрыть карточку.', geAddBtn: 'Добавить позицию (ключ или артикул) в состав группы.', bulkBg: '', swGo: 'Войти под выбранным уровнем.', swCancel: 'Отмена.', drop: 'Перетащите сюда файл отчёта 1С или щёлкните, чтобы выбрать.'
+  };
+  var TIPS_TAB = { dash: 'Дашборд: показатели и графики по всему складу или выбранному складу.', advisor: 'Советник: что заказать, где минимум занижен, залежалый запас, наборы ТО — рекомендации по расходу.', items: 'Остатки: полный список позиций с фильтрами, карточками и правкой минимумов.', crit: 'Критический запас: красные и жёлтые позиции, сколько заказать.', order: 'Заказ: кандидаты на пополнение, корзина и сохранённые заказы поставщикам.', excl: 'Исключения: снятые с производства / нерелевантные позиции, выведенные из контроля.', wh: 'Склады: остатки по колонкам контроля и настройка, какие склады 1С учитываются.', brands: 'Бренды: статистика запаса и красных позиций по брендам.', groups: 'Группы замен: взаимозаменяемые позиции с общим минимумом.', hist: 'История: динамика статусов и стоимости по загрузкам 1С.', recon: 'Сверка: дубли артикулов и наименований — решить, одно это или разное.', anl: 'Аналоги: база кроссов и предложения групп замен.', stat: 'Статистика: поиск товара и его поступления, партии, снимки остатков.', sheets: 'Листы книги: просмотр и правка любых листов Google-таблицы.', load: 'Загрузка 1С (WIZARD): загрузить отчёт 1С и пересобрать отчёты.', help: 'Справка по всем вкладкам и расчётам.', builder: 'Конструктор (WIZARD): свои страницы из блоков, названия вкладок, видимость листов.', passwords: 'Пароль WIZARD, ускоритель Cloudflare, Битрикс24.', sheet: 'Закреплённый лист книги — открыть.', page: 'Страница, собранная в Конструкторе.' };
+  var TIPS_TEXT = { 'Показать в таблице': 'Отфильтровать таблицу Советника по позициям этой рекомендации.', '🛒 В корзину заказа': 'Добавить позиции рекомендации в корзину заказа с рекомендуемым количеством.', 'Принять расчётные минимумы': 'WIZARD: записать расчётные минимумы этих позиций в «Справочник» одной кнопкой.', 'Открыть заказы': 'Перейти к сохранённым заказам.', '⊘ Исключить из контроля…': 'WIZARD: исключить эти позиции из контроля с указанием причины.', 'Открыть «Исключения»': 'Перейти на вкладку «Исключения».', 'Наборы ТО': 'Перейти к таблице наборов ТО.', 'Открыть Советник': 'Перейти на вкладку «Советник».', 'Понятно': 'Закрыть подсказку и пометить просмотренным.', 'Критический запас': 'Открыть вкладку «Критический запас» с красными позициями.', '🛒 В заказ': 'Открыть вкладку «Заказ» с красными позициями.', 'Все (снять выбор)': 'Снять выбор брендов — показывать все.', 'Только найденные': 'Выбрать только бренды, найденные по строке поиска.', 'Готово': 'Закрыть список.', 'Карточка': 'Открыть карточку позиции.', 'Карточка / правка': 'Открыть карточку позиции; WIZARD может править минимумы.', 'Состав группы': 'Показать позиции группы замен.', 'Это разные товары': 'Отметить в сверке: дубль ложный, позиции разные.', 'Это идентичный товар': 'Отметить в сверке: это один товар — объединить.', 'Принять отмеченные': 'Применить отмеченные предложения аналогов к Справочнику.', '+ В группу': 'Добавить позицию в состав группы.', 'состав': 'Показать состав группы замен.', 'Текст': 'Добавить текстовый блок.', 'Ссылки': 'Добавить блок ссылок.', 'Фрагмент листа': 'Добавить диапазон ячеек листа книги.', 'Картинка': 'Добавить картинку по ссылке.', 'Показатели': 'Добавить блок показателей (KPI).', '✕': 'Закрыть / убрать.', '＋': 'Добавить в корзину заказа.', '✓ в корзине': 'Уже в корзине — клик уберёт.', '⊘': 'WIZARD: исключить позицию из контроля.', '↩': 'Вернуть позицию в контроль.', 'Сбросить': 'Сбросить фильтры.' };
+  (function () {
+    var tip = $('tip'), timer = null, cur = null;
+    function tipFor(el) {
+      if (el.dataset.tip) return el.dataset.tip;
+      if (el.title) { el.dataset.tip = el.title; el.removeAttribute('title'); return el.dataset.tip; }   // родную подсказку показываем своей, без задержки браузера
+      if (el.id && TIPS[el.id]) return TIPS[el.id];
+      if (el.classList.contains('tab')) return TIPS_TAB[el.dataset.page ? 'page' : (el.dataset.pin ? 'sheet' : el.dataset.tab)] || '';
+      if (el.classList.contains('kpi')) return el.classList.contains('link') ? 'Клик — показать эти позиции в списке.' : '';
+      var t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      if (TIPS_TEXT[t]) return TIPS_TEXT[t];
+      if (el.tagName === 'BUTTON' && /^⬇ CSV/.test(t)) return 'Выгрузить в CSV (откроется в Excel).';
+      if (el.tagName === 'BUTTON' && /^⟳/.test(t)) return 'Обновить.';
+      if (el.classList.contains('rolecard')) return el.dataset.role === 'wizard' ? 'Полный доступ по паролю: загрузка 1С, минимумы, группы, склады, настройки.' : 'Просмотр без пароля: все вкладки, фильтры, карточки, выгрузка CSV.';
+      return '';
+    }
+    function hide() { if (timer) clearTimeout(timer); timer = null; tip.style.display = 'none'; cur = null; }
+    function show(el, x, y) {
+      var text = tipFor(el); if (!text) return; cur = el;
+      tip.textContent = text; tip.style.display = 'block'; tip.classList.remove('up');
+      var r = el.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, left = Math.max(6, Math.min(r.left, window.innerWidth - w - 6)), top = r.bottom + 8;
+      if (top + h > window.innerHeight - 6) { top = r.top - h - 8; tip.classList.add('up'); }
+      tip.style.left = left + 'px'; tip.style.top = Math.max(4, top) + 'px';
+    }
+    document.addEventListener('mouseover', function (e) {
+      var el = e.target.closest('button, select, input, textarea, .tab, .whchip, .kpi, .rolecard, [title], [data-tip]'); if (!el || el === cur) return;
+      if (el.closest('#tip')) return;
+      hide(); timer = setTimeout(function () { show(el, e.clientX, e.clientY); }, 350);
+    });
+    document.addEventListener('mouseout', function (e) { var el = e.target.closest('button, select, input, textarea, .tab, .whchip, .kpi, .rolecard, [title], [data-tip]'); if (el && (!e.relatedTarget || !el.contains(e.relatedTarget))) hide(); });
+    ['mousedown', 'scroll', 'keydown', 'wheel'].forEach(function (ev) { document.addEventListener(ev, hide, true); });
+  })();
   try { $('modeLabel').textContent = GAS ? 'Google' : (window.KZW_DESKTOP ? 'настольная версия' : (EDGE ? 'ускоритель' : 'сайт')); } catch (e) {}
   // v1.8: ускоритель Cloudflare (вкладка «Пароль», WIZARD)
   function edgeShow(r) {
